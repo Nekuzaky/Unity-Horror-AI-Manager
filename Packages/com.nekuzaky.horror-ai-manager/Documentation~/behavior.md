@@ -15,10 +15,14 @@ Patrol ─(suspicious)→ Alert ─(stared long enough)→ Investigate ─(reach
 |---|---|---|
 | **Patrol** | Walks its route at *Patrol Speed*, waiting at each waypoint; without a route, guards its home. | Suspicion ≥ *Alert Threshold* → Alert. Spotted → Chase. |
 | **Alert** | Stops and turns toward the last known position. | After *Alert Duration*: Investigate if it still remembers something and suspicion ≥ *Calm Threshold*, else Patrol (*calmed down*). Spotted → Chase. |
-| **Investigate** | Walks to the last known position at *Investigate Speed* (it follows the memory if it moves). | Arrived → Search. After *Investigate Timeout* → Search. Spotted → Chase. |
+| **Investigate** | Walks to the last known position at *Investigate Speed* (it follows the memory if it moves). The point is snapped to the NavMesh within 2 m; farther off, it heads for the nearest point within 10 m. | Arrived → Search (*reached the last known position*). Unreachable (off the NavMesh, or only a partial path) → it walks as close as it can, then Search around where it stopped (*could not reach the last known position*). After *Investigate Timeout* → Search. Spotted → Chase. |
 | **Search** | Visits random points within *Search Radius* of where it lost you, waiting *Search Point Wait* at each. | A new noise or glimpse above *Alert Threshold* → Investigate. After *Search Duration* → Patrol (*gave up*, forgets everything). Spotted → Chase. |
 | **Chase** | Runs at *Chase Speed* to the target while it sees it, then to its last known position. Within *Catch Distance*: **caught**. | *Lose Sight Grace* seconds without seeing the target → Lost Track. |
-| **Lost Track** | Rushes to the last place it saw the target. | Spotted again → Chase (*saw the target again*). Arrived, or after *Lost Track Timeout* → Search. |
+| **Lost Track** | Rushes to the last place it saw the target. | Spotted again → Chase (*saw the target again*). Arrived, or after *Lost Track Timeout* → Search; an unreachable spot gives *could not reach the last known position* and a search around where it stopped. |
+
+Disabling an enemy (or its object) while it is not patrolling raises a last change to **Patrol** with the reason
+*was disabled*, so music or effects hooked to Chase or Search stop. Enabled again, it starts on patrol with an empty
+gauge, perception and memory.
 
 Every change records a `HorrorTransition` (from, to, reason, time). `HorrorTransition.Explanation` turns the reason
 into words: *heard a noise*, *spotted the target*, *lost sight of the target*, *gave up the search*... The inspector

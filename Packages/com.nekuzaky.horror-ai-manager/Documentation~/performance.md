@@ -10,7 +10,8 @@ A hidden `Horror AI` object updates every enemy once per frame, after your scrip
    over frames from the start. A perception costs up to four sight rays per target and one ray per new noise in reach.
 3. **Raycast budget.** Before each perception, the worst-case number of rays is checked against what is left of
    `HorrorAI.RaycastBudget` (128 per frame by default). When the budget is spent, the remaining enemies wait for the
-   next frame, first in line. Nobody is ever skipped forever, and the budget is never exceeded.
+   next frame, and the first one that had to wait goes first. Nobody is skipped for long (with 60 enemies and a
+   budget of 30 rays, the longest wait measured by the tests is 8 frames), and the budget is never exceeded.
 4. **Behavior.** Every enemy's state machine runs every frame (no ray), so timers, turning and movement stay smooth.
    NavMesh destinations are only set again when they move by more than 35 cm.
 
@@ -18,24 +19,42 @@ A hidden `Horror AI` object updates every enemy once per frame, after your scrip
 
 Everything is reserved when components are created: fixed arrays for noises and ray hits, lists sized for 64 enemies,
 structs for perception, memory and transitions, non-allocating physics queries (`Linecast`, `RaycastNonAlloc`), no
-LINQ, no closures, no boxing, no string built per frame. Unity Events are only raised on a change of mind. The tests
-check it with Unity's `Is.Not.AllocatingGCMemory()` over hundreds of frames, including state changes and events, and
-`HorrorAI.Stats.AllocatedBytes` reports it live (the Horror AI window shows it).
+LINQ, no closures, no boxing, no string built per frame. Rays recognise targets and enemies by collider id, so no
+collider object is created the first time a ray hits it.
+
+Some costs only happen once, the first time a path runs: the runtime compiles a method the first time it is called,
+and a Unity Event prepares its listeners the first time it fires. So that they never land in the middle of a game:
+
+- the first enemy that registers compiles every method of the package and runs each state of the behavior once, on a
+  private brain that does not move anything;
+- each enemy prepares its Unity Events when it is enabled. Listeners added from code after that are prepared the first
+  time the event fires.
+
+`HorrorAI.Stats.AllocatedBytes` reports what the update allocated, from Unity's profiler: the `GC.Alloc` marker counts
+the allocations made on the update's thread, and `GC Allocated In Frame` gives their size (memory allocated by other
+threads at the same time is not counted). It is shown in the Horror AI window, and is -1 in a release player, where
+these counters do not exist. The tests check that a deliberate 4 KB allocation is seen, that another thread's is not,
+and that perception, every first change of mind and Unity Events with persistent listeners allocate nothing
+(`Is.Not.AllocatingGCMemory()`). NavMesh Agents are not placed on the NavMesh in Edit Mode (a test checks it), so the
+allocation of the update with real agents is measured by the benchmark, in Play Mode.
 
 ## Benchmark
 
 `Tools/Benchmark.ps1` plays two scenarios in real Play Mode: 50 enemies with NavMesh Agents around one target that
 walks in a circle among walls, with 8 lamps and a flashlight on, then all lights off. 1,800 frames each at 60 fps,
-after 120 warm-up frames.
+after 120 warm-up frames. Two runs:
 
-| Scenario | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC per frame | States at the end |
-|---|---:|---:|---:|---:|---|
-| 50 enemies, lit scene (8 lamps + flashlight) | 0.044 / 0.058 / 0.446 ms | 13.5 | 8.3 | 0 B | 10 Patrol, 1 Alert, 3 Investigate, 24 Search, 9 Chase, 3 Lost Track |
-| 50 enemies, dark scene (lights off) | 0.045 / 0.057 / 0.138 ms | 14.4 | 8.3 | 0 B | 13 Patrol, 11 Investigate, 22 Search, 4 Chase |
+| Scenario | Run | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC allocated by the update | States at the end |
+|---|---|---:|---:|---:|---:|---|
+| 50 enemies, lit scene (8 lamps + flashlight) | 1 | 0.044 / 0.059 / 0.224 ms | 12.1 | 8.3 | 0 B in 1,800 frames | 13 Patrol, 1 Alert, 4 Investigate, 27 Search, 5 Chase |
+| | 2 | 0.044 / 0.058 / 0.259 ms | 12.6 | 8.3 | 0 B in 1,800 frames | 14 Patrol, 3 Investigate, 29 Search, 4 Chase |
+| 50 enemies, dark scene (lights off) | 1 | 0.044 / 0.059 / 0.162 ms | 12.1 | 8.3 | 0 B in 1,800 frames | 23 Patrol, 2 Investigate, 24 Search, 1 Chase |
+| | 2 | 0.045 / 0.059 / 0.471 ms | 12.0 | 8.3 | 0 B in 1,800 frames | 20 Patrol, 3 Investigate, 25 Search, 2 Chase |
 
-Intel Core i7-14700KF, Unity 6000.3.13f1, Editor Play Mode in batch mode. The script fails if the average reaches
-0.1 ms or if any byte is allocated. `Tools/Build-Check.ps1` runs the demo in a Windows player and checks that the
-update allocates 0 B there too.
+The warm-up frames allocated 0 B too. Intel Core i7-14700KF, Unity 6000.3.13f1, Editor Play Mode in batch mode. The
+script fails if the average reaches 0.1 ms, if any byte is allocated after the warm-up, or if the allocations cannot
+be measured; it logs the frame and the changes of mind of any frame that allocates. `Tools/Build-Check.ps1` runs the
+demo in a Windows development player and checks that the update allocates 0 B there too.
 
 ## Tuning
 

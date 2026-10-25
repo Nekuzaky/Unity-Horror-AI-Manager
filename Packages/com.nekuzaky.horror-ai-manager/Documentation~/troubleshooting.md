@@ -3,8 +3,8 @@
 ## Limitations
 
 - **Light is estimated, not rendered.** Baked lights, emissive materials and light probes do not count unless a
-  `Horror Light Source` stands for them. Directional lights are not supported: raise `HorrorAI.AmbientLight` for
-  moonlight or a lit exterior.
+  `Horror Light Source` stands for them. A directional light (sun, moon) counts once it has a `Horror Light Source`;
+  `HorrorAI.AmbientLight` sets the light everywhere else.
 - **One gauge per enemy.** An enemy watches the four first targets and keeps one suspicion gauge for the most visible.
   Made for single-player games.
 - **Straight-line hearing.** Noise is damped per wall crossed, it does not travel through doors and corridors.
@@ -37,6 +37,13 @@
 - Each wall multiplies the level by *Wall Damping* (0.45).
 - Noises whose source is the enemy itself are ignored.
 
+## The enemy "could not reach the last known position"
+
+The spot it wanted to check is off the NavMesh or somewhere it cannot walk to (a table, a closed room). It walks to the
+nearest point it can reach and searches around it. Bake the NavMesh where enemies should be able to go.
+
 ## The Horror AI window is empty
 
-It lists running enemies in Play Mode. Enemies register when enabled; a disabled object is not listed.
+It lists running enemies in Play Mode (**Tools > Horror AI > Open Horror AI**). Enemies register when enabled; a
+disabled object is not listed. Disabling an enemy sends it back to Patrol (*was disabled*), so music hooked to Chase
+stops; enabling it again starts it with an empty memory.

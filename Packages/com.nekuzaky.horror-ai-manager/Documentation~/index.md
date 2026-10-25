@@ -8,7 +8,7 @@ spotted.
 - [Perception](perception.md): sight and the suspicion gauge, light exposure, crouching, hearing, memory.
 - [Behavior](behavior.md): the states, what makes an enemy change its mind, and the events.
 - [Archetypes and presets](archetypes.md): Perception Profile, Behavior Profile, Horror Archetype, Patroller.
-- [Debugging](debugging.md): Scene view gizmos and the **Window > Horror AI** window.
+- [Debugging](debugging.md): Scene view gizmos and the **Tools > Horror AI > Open Horror AI** window.
 - [Scripting](scripting.md): `HorrorAI`, `HorrorEnemy` and the events from code.
 - [Integrations](integrations.md): Resonance sounds heard by enemies, Hindsight recordings of their state.
 - [Performance and how it works](performance.md): time slicing, the raycast budget, zero allocation, benchmark.

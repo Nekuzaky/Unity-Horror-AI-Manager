@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for the report! If you can, reproduce the problem with the **Greybox Demo** sample
-        (Package Manager > Horror AI Manager > Samples) or a tiny scene. The **Window > Horror AI** window shows the
+        (Package Manager > Horror AI Manager > Samples) or a tiny scene. The **Tools > Horror AI > Open Horror AI** window shows the
         state of every enemy and the reason of its last transition: please copy it into the report.
   - type: textarea
     id: what

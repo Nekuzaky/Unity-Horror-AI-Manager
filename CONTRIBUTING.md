@@ -10,7 +10,7 @@ Thanks for helping! Bug reports, ideas and pull requests are all welcome.
    gizmos and the window, `Integrations` for Resonance and Hindsight, `Tests/Editor` for the tests). Development-only
    code lives in `Assets/Dev`: the demo in `Assets/Dev/Demo`, the scene and preset builders and the benchmark in
    `Assets/Dev/Editor`, the player-build probe in `Assets/Dev/BuildProbe`.
-3. Open `Assets/Dev/Demo/Horror AI Demo.unity`, press Play and open **Window > Horror AI**.
+3. Open `Assets/Dev/Demo/Horror AI Demo.unity`, press Play and open **Tools > Horror AI > Open Horror AI** (Ctrl+Shift+Alt+H).
 
 Every development task is a script in [`Tools/`](Tools/README.md). Those that start Unity need the project to be
 closed in the editor.

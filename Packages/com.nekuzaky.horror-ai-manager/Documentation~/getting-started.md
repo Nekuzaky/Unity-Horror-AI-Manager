@@ -34,7 +34,7 @@ Loudness is in meters: how far the noise carries in open space for an enemy with
 
 Add a `Horror Light Source` to every lamp that should make the player easier to spot, and to the player's
 flashlight with **Reveals Its Holder** on: while the flashlight is on, the player can be seen from far away, even in
-the dark. Turn lights on and off with `SetOn(bool)` or `Toggle()`, or by enabling the Unity `Light` it follows.
+the dark. Turn lights on and off with `SetOn(bool)` or `Toggle()`, or by enabling the `Light` it follows.
 
 ## 4. Scares
 
@@ -43,7 +43,7 @@ Open the enemy's **Events** foldout and hook your sounds, music and jump scares 
 
 ## 5. Watch it think
 
-Press Play and open **Window > Horror AI**. Select the enemy to see its view cone, its suspicion bar, its last known
+Press Play and open **Tools > Horror AI > Open Horror AI** (Ctrl+Shift+Alt+H). Select the enemy to see its view cone, its suspicion bar, its last known
 position and its search area in the Scene view.
 
 ## The demo
@@ -51,5 +51,11 @@ position and its search area in the Scene view.
 Import **Greybox Demo** from **Package Manager > Horror AI Manager > Samples** and open `Horror AI Demo.unity`.
 Click in the Game view to look around. WASD to move, Shift to run (loud), C to crouch (quiet and low), F for the
 flashlight. The enemy turns green on patrol, yellow when alert, orange when it checks something, purple when it
-searches and red when it chases. The demo uses the built-in pipeline's Standard material and the Input Manager
-(set **Active Input Handling** to **Both** if your project uses the Input System only).
+searches and red when it chases.
+
+The demo reads the keyboard and mouse with the **Input System** package when it is installed and active, and falls
+back to the old Input Manager otherwise, so it works with any setting of **Active Input Handling**. Its materials use
+the built-in Standard shader; with URP or HDRP, the scene's *Pipeline Materials* object swaps them at runtime for the
+active pipeline's Lit shader, so the level is not pink in Play Mode (it still is in Edit Mode: convert the six
+materials in `Materials` with the Render Pipeline Converter if that bothers you). The light intensities are tuned for
+the built-in pipeline: the level is darker in URP, and needs brighter lights in HDRP.

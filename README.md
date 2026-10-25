@@ -4,9 +4,9 @@
   <a href="https://github.com/Nekuzaky/Unity-Horror-AI-Manager/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/Nekuzaky/Unity-Horror-AI-Manager/actions/workflows/tests.yml/badge.svg"></a>
   <img alt="Unity 6000.3 or newer" src="https://img.shields.io/badge/Unity-6000.3%2B-1b1d24?logo=unity&logoColor=white">
   <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-8b7cff">
-  <img alt="50 enemies: 0.045 ms per frame" src="https://img.shields.io/badge/50%20enemies-0.045%20ms-3ddc84">
-  <img alt="GC per frame: 0 B" src="https://img.shields.io/badge/GC%20per%20frame-0%20B-3ddc84">
-  <img alt="Tests: 73 EditMode" src="https://img.shields.io/badge/tests-73%20EditMode-38bdf8">
+  <img alt="50 enemies: 0.044 ms per frame" src="https://img.shields.io/badge/50%20enemies-0.044%20ms-3ddc84">
+  <img alt="GC per frame: 0 B, measured" src="https://img.shields.io/badge/GC%20per%20frame-0%20B%20measured-3ddc84">
+  <img alt="Tests: 96 EditMode" src="https://img.shields.io/badge/tests-96%20EditMode-38bdf8">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-8b92a2"></a>
 </p>
 
@@ -38,7 +38,7 @@ tells you *why* the monster did what it did.
   slowly when it is far, in the dark or half hidden. It decays once the target is out of sight.
 - **Light matters, without reading the render.** Mark lamps and flashlights with a `Horror Light Source`. A target's
   exposure is estimated from the marked lights (distance, beam cone, an occlusion ray), so it works the same with the
-  built-in pipeline, URP and HDRP. A flashlight makes its holder visible from afar while it is on.
+  built-in pipeline, URP and HDRP. A marked sun or moon lights every target under the open sky. A flashlight makes its holder visible from afar while it is on.
 - **Crouching.** `HorrorTarget.Crouching` lowers the points enemies look at (low cover hides you) and slows the gauge.
 - **Hearing through walls.** `HorrorAI.EmitNoise(position, loudness, source)` from code, or a `Noise Emitter` for
   props that clatter when they fall, floors that creak when you step on them, or any Unity Event and animation
@@ -54,11 +54,14 @@ tells you *why* the monster did what it did.
   *There is no Horror Target in the scene* → **Add a Horror Target to the player**. Missing archetype, collider,
   Rigidbody, patrol route or unmarked lights, each explained with its fix.
 - **Gizmos and a live debug window.** The view cone, the hearing radius, the suspicion bar, the last known
-  position, the search area and path, noise rings, all colored by state. **Window > Horror AI** lists every enemy
+  position, the search area and path, noise rings, all colored by state. **Tools > Horror AI > Open Horror AI**
+  (Ctrl+Shift+Alt+H) lists every enemy
   with its state, suspicion, what it sees and hears, its memory and the reason of its last change of mind.
 - **Built for many enemies.** Perception is spread over frames, raycasts per frame are capped by a global budget,
-  and nothing is allocated per frame once warmed up. Fifty enemies cost 0.045 ms per frame.
-- **Optional integrations.** [Resonance](https://github.com/Nekuzaky/Resonance) sounds can be heard by enemies;
+  and nothing is allocated per frame, as measured with Unity's profiler counters. Fifty enemies cost 0.044 ms per
+  frame.
+- **Optional integrations.** [Resonance](https://github.com/Nekuzaky/Resonance) 0.6.0 or newer: its sounds can be
+  heard by enemies;
   [Hindsight](https://github.com/Nekuzaky/Hindsight) records each enemy's state and suspicion and bookmarks every
   change of mind. Each integration compiles only when that package is installed.
 
@@ -83,10 +86,12 @@ Pin a release by adding its tag, for example `...?path=/Packages/com.nekuzaky.ho
    player's flashlight with **Reveals Its Holder** on.
 4. Make noise: `HorrorAI.EmitNoise(transform.position, 6f, gameObject)` on each footstep, or a **Noise Emitter** on
    props.
-5. Press Play and open **Window > Horror AI**.
+5. Press Play and open **Tools > Horror AI > Open Horror AI** (Ctrl+Shift+Alt+H).
 
 To try it first, import the **Greybox Demo** from the package's **Samples** tab: a dark level, three lamps, bottles
-that clatter, a creaky floor, and one patrolling enemy. WASD, Shift to run, C to crouch, F for the flashlight.
+that clatter, a creaky floor, and one patrolling enemy. WASD, Shift to run, C to crouch, F for the flashlight. It
+reads the Input System (or the Input Manager when that is the only one active) and swaps its materials for the active
+pipeline's Lit shader under URP and HDRP.
 
 ## Components
 
@@ -94,7 +99,7 @@ that clatter, a creaky floor, and one patrolling enemy. WASD, Shift to run, C to
 |---|---|---|
 | `Horror Enemy` | Each monster (with a `NavMesh Agent`) | Sees, hears, remembers and runs the state machine. Holds the events. |
 | `Horror Target` | The player | What enemies look for. `Crouching`, visibility multiplier, body points. |
-| `Horror Light Source` | Lamps, torches, the flashlight | Reveals targets in its range and beam. Follows a Unity `Light`, or set by hand. |
+| `Horror Light Source` | Lamps, torches, the flashlight, the moon | Reveals targets in its range and beam (or under the sky). Follows a `Light`, or set by hand. |
 | `Noise Emitter` | Props, floors, triggers | Makes a noise on collision, trigger, start, or when `Emit()` is called. |
 | `Patrol Route` | An empty object with waypoint children | Loop, ping-pong or once, with a wait per waypoint. |
 | `Horror Archetype` | Asset | A kind of enemy: a `Perception Profile` plus a `Behavior Profile`. |
@@ -131,18 +136,26 @@ public class ChaseMusic : MonoBehaviour
 
 ## Performance
 
-Measured in real Play Mode with `Tools/Benchmark.ps1`: 50 NavMesh enemies around one moving target, 1,800 frames per
-scenario at 60 fps after 120 warm-up frames, Intel Core i7-14700KF, Unity 6000.3.13f1.
+Measured in real Play Mode with `Tools/Benchmark.ps1`, run twice: 50 NavMesh enemies around one moving target,
+1,800 frames per scenario at 60 fps after 120 warm-up frames, Intel Core i7-14700KF, Unity 6000.3.13f1.
 
-| Scenario | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC per frame |
-|---|---:|---:|---:|---:|
-| 50 enemies, lit scene (8 lamps + flashlight) | 0.044 / 0.058 / 0.446 ms | 13.5 | 8.3 | 0 B |
-| 50 enemies, dark scene (lights off) | 0.045 / 0.057 / 0.138 ms | 14.4 | 8.3 | 0 B |
+| Scenario | Run | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC allocated by the update |
+|---|---|---:|---:|---:|---:|
+| 50 enemies, lit scene (8 lamps + flashlight) | 1 | 0.044 / 0.059 / 0.224 ms | 12.1 | 8.3 | 0 B in 1,800 frames |
+| | 2 | 0.044 / 0.058 / 0.259 ms | 12.6 | 8.3 | 0 B in 1,800 frames |
+| 50 enemies, dark scene (lights off) | 1 | 0.044 / 0.059 / 0.162 ms | 12.1 | 8.3 | 0 B in 1,800 frames |
+| | 2 | 0.045 / 0.059 / 0.471 ms | 12.0 | 8.3 | 0 B in 1,800 frames |
 
 The time covers the whole Horror AI update on the main thread: light exposure, sight and hearing raycasts, the
 state machines and the NavMesh destinations they set (Unity's own agent movement is not included). Each enemy
-perceives ten times per second, spread over frames, and the default budget caps raycasts at 128 per frame. A
-Windows player build of the demo, checked by `Tools/Build-Check.ps1`, also allocates 0 B. More in
+perceives ten times per second, spread over frames, and the default budget caps raycasts at 128 per frame.
+
+The garbage is read every frame from Unity's profiler: the `GC.Alloc` marker on the update's thread and the
+`GC Allocated In Frame` counter. The update allocated 0 B on every frame, the 120 warm-up frames included: the first
+enemy that registers compiles the package's code and runs each behavior path once, so nothing is compiled or
+prepared in the middle of a game. A Windows development player of the demo, checked by `Tools/Build-Check.ps1`,
+also allocates 0 B (release players have no profiler counters, so `HorrorAI.Stats.AllocatedBytes` is -1 there).
+More in
 [Performance](Packages/com.nekuzaky.horror-ai-manager/Documentation~/performance.md).
 
 ## Documentation
@@ -161,8 +174,8 @@ Windows player build of the demo, checked by `Tools/Build-Check.ps1`, also alloc
 ## Limitations
 
 - Light exposure is estimated from the lights you mark, not read from the rendered image: baked lighting, emissive
-  materials and light probes do not count unless a `Horror Light Source` stands for them. Directional lights are not
-  supported; raise `HorrorAI.AmbientLight` for moonlight.
+  materials and light probes do not count unless a `Horror Light Source` stands for them. A directional light counts
+  as fully on or blocked (one ray toward it); raise `HorrorAI.AmbientLight` for light that is everywhere.
 - Each enemy keeps one suspicion gauge and watches at most four targets; it chases the most visible one. Built for
   single-player games.
 - Sight and light use raycasts against colliders: a target needs no collider, but walls and cover do.
@@ -180,7 +193,7 @@ Windows player build of the demo, checked by `Tools/Build-Check.ps1`, also alloc
 ## Contributing
 
 Bug reports, ideas and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md): the repository is the package
-plus a development project, and every development task is a script in [`Tools/`](Tools/README.md). The code follows
+plus a development project (Input System only), and every development task is a script in [`Tools/`](Tools/README.md). The code follows
 the spirit of NASA's *Power of 10* rules, has no comments and no coroutines, and builds with zero warnings.
 
 ## Support

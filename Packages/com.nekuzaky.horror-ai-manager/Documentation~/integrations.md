@@ -18,9 +18,9 @@ there is no map:
 - **Map entries** give a sound its own loudness in meters, or mark it **silent** (the monster's voice, the music).
   Sounds not listed use the default, unless *Use Default* is off.
 
-Resonance stays AI-agnostic: it only raises `SoundStarted`; the mapping lives in this package. The bridge needs the
-Resonance version that adds `ResonanceEngine.SoundStarted` (`SoundStartInfo`: handle, event, emitter, position,
-volume, max distance).
+Resonance stays AI-agnostic: it only raises `SoundStarted`; the mapping lives in this package. The bridge needs
+**Resonance 0.6.0 or newer**, which adds `ResonanceEngine.SoundStarted` (`SoundStartInfo`: handle, event, emitter,
+position, volume, max distance). With an older Resonance the integration is not compiled.
 
 To try it in the development project, add Resonance to `Packages/manifest.json`
 (`"com.nekuzaky.resonance": "file:<path to Resonance>/Packages/com.nekuzaky.resonance"` or its Git URL), press Play
@@ -35,5 +35,7 @@ With [Hindsight](https://github.com/Nekuzaky/Hindsight) installed, nothing to se
 - every enemy gets a **Hindsight Probe** in the editor, whose tracked values are drawn in Hindsight's graph:
   *AI state*, *Suspicion*, *Sees target*, *Target lit*, *Memory certainty* and *Last known position*.
 
-Turn either off from code with `HorrorHindsight.Bookmarks = false` or `HorrorHindsight.TrackValues = false`. The
+Bookmark labels are built once per enemy when it is enabled (with the name it has then) and reused, so a change of
+mind allocates nothing. The integration installs itself after the Play Mode reset, so it also works with domain reload
+disabled. Turn either off from code with `HorrorHindsight.Bookmarks = false` or `HorrorHindsight.TrackValues = false`. The
 bookmark calls are removed from release builds like every `Hindsight.Bookmark` call.

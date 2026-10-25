@@ -8,12 +8,12 @@ Everything lives in the `Nekuzaky.HorrorAI` namespace.
 |---|---|
 | `EmitNoise(Vector3 position, float loudness, GameObject source = null)` | A noise enemies can hear. Loudness in meters. Enemies ignore their own noises. |
 | `Enemies`, `Targets`, `Lights` | The running components (`IReadOnlyList`; loop with `for` to avoid an enumerator). |
-| `Stats` | The last frame: enemies, perceptions, raycasts, deferred perceptions, milliseconds, allocated bytes. |
+| `Stats` | The last frame: enemies, perceptions, raycasts, deferred perceptions, milliseconds, and `AllocatedBytes`, the managed memory the update allocated on its own thread, read from Unity's profiler (`GC.Alloc` marker and `GC Allocated In Frame` counter). -1 in a release player, where these do not exist: measure in a development build. |
 | `RaycastBudget` | Raycasts allowed per frame for all enemies (128 by default, 24 at least). |
 | `AmbientLight` | Exposure of a target no light reaches (0.04 by default). |
 | `GetExposure(HorrorTarget)` | How lit a target is, 0 to 1. |
 | `CopyRecentNoises(HorrorNoise[] buffer)` | The most recent noises, newest first. |
-| `StateChanged`, `NoiseEmitted`, `EnemyAdded`, `EnemyRemoved` | Global events. |
+| `StateChanged`, `NoiseEmitted`, `EnemyAdded`, `EnemyRemoved` | Global events. Cleared when Play Mode starts, also with domain reload disabled: subscribe in `OnEnable`, or from a `RuntimeInitializeOnLoadMethod` at `AfterAssembliesLoaded` or later. |
 | `Time` | The clock the AI runs on (seconds since it started). |
 
 ## HorrorEnemy
@@ -59,6 +59,7 @@ target.visibilityMultiplier = hidden ? 0f : 1f;
 
 ## Custom movement
 
-`IHorrorMover` is what the state machine drives: `MoveTo`, `Stop`, `HasArrived`, `TryProject` (snap a search point to
-the walkable area), `Turn` and `Tick`. The default uses the `NavMesh Agent` on the enemy, or moves the transform in
+`IHorrorMover` is what the state machine drives: `MoveTo`, `Stop`, `HasArrived`, `Reachable` (false when the last
+destination cannot be reached, so the enemy searches where it stopped), `TryProject` (snap a search point to the
+walkable area), `Turn` and `Tick`. The default uses the `NavMesh Agent` on the enemy, or moves the transform in
 straight lines when there is none. Call `SetMover` in `Awake` to use yours.

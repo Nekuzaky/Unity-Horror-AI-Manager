@@ -18,8 +18,9 @@ Sight Gain × visible fraction × light factor × distance factor × target visi
 - **Distance factor** is 1 up to *Close Range*, then falls to *Far Gain* at the edge of the view range.
 - **Target visibility** is the target's *Visibility*, times *Crouch Visibility* when crouching.
 
-With the Patroller values, a standing player in plain view is spotted in 0.5 s when lit and close, about 4 s in the
-dark close by, and about 12 s in the dark at the edge of the range. Once the target is out of sight, the gauge holds
+With the Patroller values and the default ambient light (0.04), a standing player in plain view is spotted in 0.5 s
+when lit and close, about 3.2 s in the dark close by, and about 9.2 s in the dark at the edge of the range. The
+Perception Profile inspector computes these times with the current ambient light. Once the target is out of sight, the gauge holds
 for *Decay Delay* seconds, then loses *Suspicion Decay* per second.
 
 The gauge drives the [behavior](behavior.md): above *Alert Threshold* the enemy stops and stares, at 100 % while
@@ -37,7 +38,8 @@ exposure = ambient + Σ Reveal Strength × falloff(distance, range) × cone(angl
 `falloff` is 1 at the light and 0 at its range (smooth, like Unity's lights), `cone` is 1 inside the beam and fades
 to 0 at its edge. A ray from the light to the target's center checks that no wall is in between. Ambient light is
 `HorrorAI.AmbientLight` (0.04 by default). A light under the target with **Reveals Its Holder** sets the exposure to
-at least its *Holder Exposure* while it is on, without a ray.
+at least its *Holder Exposure* while it is on, without a ray. A **directional** light adds its *Reveal Strength* (no
+falloff, no cone) when a 200 m ray from the target toward the light is not blocked.
 
 The estimate does not read the rendered image: what you see on screen and what the AI considers lit only match if
 the lamps that matter carry a `Horror Light Source`.
@@ -57,7 +59,9 @@ each enemy checks the noises it has not heard yet (four at most per perception):
 level = (1 − distance / (loudness × Hearing Multiplier)) × Wall Damping ^ walls
 ```
 
-`walls` is the number of occluders crossed by a ray from the noise to the enemy's ears. A level above
+`walls` is the number of occluders crossed by a ray from the noise to the enemy's ears, not counting the enemy's own
+colliders, the source's colliders when the source is a `Horror Target` or a `Horror Enemy`, or anything within 25 cm
+of the noise (the body of the object that made it). The eyes and ears are at the eye height above the feet. A level above
 *Hearing Threshold* is heard: suspicion rises by `level × Hearing Gain`, never above *Hearing Cap* (hearing alone
 makes the enemy investigate, never chase), and the noise position becomes the last known position (unless the enemy
 saw the target less than 1.5 s ago). Enemies ignore noises whose source is themselves.
