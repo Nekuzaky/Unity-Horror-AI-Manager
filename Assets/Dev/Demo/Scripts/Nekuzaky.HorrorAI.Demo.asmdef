@@ -1,0 +1,16 @@
+{
+    "name": "Nekuzaky.HorrorAI.Demo",
+    "rootNamespace": "Nekuzaky.HorrorAI.Demo",
+    "references": [
+        "Nekuzaky.HorrorAI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

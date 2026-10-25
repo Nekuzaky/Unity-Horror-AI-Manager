@@ -1,0 +1,18 @@
+{
+    "name": "Nekuzaky.HorrorAI.BuildProbe",
+    "rootNamespace": "Nekuzaky.HorrorAI.Dev",
+    "references": [
+        "Nekuzaky.HorrorAI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "HORROR_AI_BUILD_PROBE"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

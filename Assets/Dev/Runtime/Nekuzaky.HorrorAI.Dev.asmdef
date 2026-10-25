@@ -1,0 +1,19 @@
+{
+    "name": "Nekuzaky.HorrorAI.Dev",
+    "rootNamespace": "Nekuzaky.HorrorAI.Dev",
+    "references": [
+        "Nekuzaky.HorrorAI",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
