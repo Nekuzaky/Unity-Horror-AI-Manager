@@ -136,6 +136,7 @@ namespace Nekuzaky.HorrorAI
             var elapsed = (Stopwatch.GetTimestamp() - started) * 1000d / Stopwatch.Frequency;
             _stats = new HorrorAIStats(Enemies.Count, Targets.Count, Lights.Count, _perceptions, _rays, _deferred, (float)elapsed,
                 GcCounter.Since(allocatedBefore, allocationsBefore), _stats.Frame + 1);
+            HorrorProbe.Ticked(this);
         }
 
         #endregion

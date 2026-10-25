@@ -214,6 +214,7 @@ namespace Nekuzaky.HorrorAI
         {
             StateChanged?.Invoke(this, transition);
             HorrorAI.RaiseStateChanged(this, transition);
+            HorrorProbe.Changed(this, transition);
             onStateChanged?.Invoke(transition.To);
             switch (transition.To)
             {

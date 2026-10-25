@@ -112,6 +112,7 @@ namespace Nekuzaky.HorrorAI
                 var source = noise.Source;
                 var walls = world.CountWalls(noise.Position, ear, profile.occluders, _colliders, CollidersOf(source), source != null);
                 var level = HearingMath.Perceived(noise.Loudness, distance, profile.hearingMultiplier, walls, profile.wallDamping);
+                HorrorProbe.Heard(this, sequence, level, walls, level >= profile.hearingThreshold);
                 if (level >= profile.hearingThreshold)
                     Hear(profile, noise, level, now);
             }
