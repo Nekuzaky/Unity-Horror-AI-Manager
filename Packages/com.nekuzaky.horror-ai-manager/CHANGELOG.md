@@ -38,8 +38,29 @@ First release.
 - **Editor:** plain-word inspectors with one-click fixes (bake a NavMesh, add a Horror Target to the player, use the
   Patroller preset, add a NavMesh Agent, create a patrol route, mark every light, add a collider or a Rigidbody);
   **GameObject > Horror AI** menus; Scene view gizmos (view cone, hearing radius, suspicion bar, last known position,
-  search area and path, noise rings, colors per state); the Horror AI debug window under **Tools > Horror AI >
-  Open Horror AI** (Ctrl+Shift+Alt+H), with **Documentation** and **GitHub Repository** next to it.
+  search area and path, noise rings, colors per state); **Documentation** and **GitHub Repository** under
+  **Tools > Horror AI**.
+- **Dashboard:** **Tools > Horror AI > Dashboard** (Ctrl+Shift+Alt+H), a UI Toolkit window for the dark and light
+  editor skins that replaces the first debug window. **Overview**: enemies by state, highest suspicion, AI cost per
+  frame (average and 95th percentile), rays against the budget, perceptions, measured garbage (*n/a* where it cannot
+  be measured) and graphs of the last 30 seconds. **Enemies**: one row per enemy with its state, suspicion, target,
+  distance and last change in plain words; a click selects and frames it; a panel with what it perceives (sight, light
+  on the target, crouching, hearing), what it remembers, its suspicion graph and its last 16 changes of mind.
+  **Noises**: the last 64 noises with their source, loudness, position and who heard them after the walls; a click
+  shows the noise in the Scene view. **Setup**: scene checks with one-click fixes (NavMesh, target, lights, archetypes,
+  agents, eyes, patrol routes) and notes on the pipeline, input and ray budget. **Archetypes**: every archetype and
+  profile with its summary in plain words, and new ones from the Patroller preset. Pause, follow the selection and a
+  link to its documentation in the header.
+- **Zero cost from the dashboard:** the runtime reaches it through three calls marked
+  `[Conditional("UNITY_EDITOR")]`, removed from players by the compiler (the player's runtime assembly holds none of
+  them); in the Editor with the window closed each is a null check. While it is open it records into preallocated
+  buffers without allocating, refreshes the visible tab ten times a second, reuses its list rows and cached strings,
+  and allocates nothing when nothing changed (tested). Benchmark unchanged: 0.043 ms per frame for 50 enemies, 0 B.
+- **Icons:** a rounded colored tile with a white glyph for Horror Enemy, Horror Target, Horror Light Source, Noise
+  Emitter, Patrol Route, Horror Archetype, Perception Profile, Behavior Profile, the Resonance Noise Map and Bridge,
+  the Hindsight probe and the dashboard, shown in the Inspector, the Project window and the Add Component menu, and
+  SVG glyphs for the dashboard tabs and states. Rendered by `docs/brand/render_icons.py` from Bootstrap Icons (MIT,
+  see Third Party Notices) and three original glyphs.
 - **Integrations:** `Resonance Noise Bridge` and `Resonance Noise Map` (Resonance sound events heard by enemies,
   Resonance 0.6.0 or newer), and Hindsight bookmarks and tracked values for every enemy, each compiled only when that
   package is installed.
@@ -74,6 +95,8 @@ An independent verification of the release candidate found these problems; each 
 - **Raycast budget:** an enemy deferred by the budget could be skipped for many frames while cheaper ones went first;
   it now goes first the next frame (a test bounds the longest wait).
 - **Directional lights** linked to a `Horror Light Source` were treated as a 10 m point light.
+- **Mark every light** also marked the glow carried by an enemy (the demo enemy's eye), which would have revealed
+  targets around the enemy; lights under a `Horror Enemy` are now skipped and not reported as unmarked (no test).
 - **Spotting times:** `perception.md` said about 4 s and 12 s to be spotted in the dark; with the default ambient light
   it is 3.2 s and 9.2 s, and the Perception Profile inspector now counts the ambient light too.
 - **Editor:** percentages are formatted without the machine culture (French Windows drew a broken glyph); the state
@@ -88,7 +111,11 @@ An independent verification of the release candidate found these problems; each 
 
 ### Verified
 
-- 96 EditMode tests pass, and 104 with Resonance 0.6.0 and Hindsight installed.
+- 111 EditMode tests pass (96 before the dashboard; 104 with Resonance 0.6.0 and Hindsight installed, measured before
+  the dashboard and not re-run since).
+- After the dashboard and the icons: `Tools/Benchmark.ps1` gives 0.043 ms per frame on average for 50 enemies (p95
+  0.057 ms), 0 B allocated; `Tools/Build-Check.ps1` finds only the runtime assembly in the player, no call to the
+  dashboard in it, and 0 B allocated.
 - `Tools/Benchmark.ps1`, run twice: 50 NavMesh enemies cost 0.044 / 0.045 ms per frame on average (p95 0.058 to
   0.059 ms), and the update allocated 0 B on every one of the 3,840 frames of each run, warm-up included.
 - `Tools/Build-Check.ps1`: in a Windows development player the enemy reacts to a noise and the update allocates 0 B.

@@ -2,13 +2,22 @@
 
 Each enemy runs a deterministic state machine every frame, from what it perceived and its memory.
 
-```
-Patrol ─(suspicious)→ Alert ─(stared long enough)→ Investigate ─(reached the spot)→ Search ─(time over)→ Patrol
-   │                    │                              │                               │
-   └────────────(spotted: gauge full while seeing the target)──────────────────→ Chase ─(lost sight)→ Lost Track
-                                                                                  ↑                        │
-                                                                                  └───(saw it again)───────┤
-                                                                                       Search ←(reached / time over)
+```mermaid
+stateDiagram-v2
+    [*] --> Patrol
+    Patrol --> Alert: suspicious (gauge above Alert Threshold)
+    Alert --> Investigate: stared long enough
+    Alert --> Patrol: calmed down
+    Investigate --> Search: reached the spot, or timed out
+    Search --> Investigate: new noise or glimpse
+    Search --> Patrol: gave up
+    Patrol --> Chase: spotted
+    Alert --> Chase: spotted
+    Investigate --> Chase: spotted
+    Search --> Chase: spotted
+    Chase --> LostTrack: lost sight
+    LostTrack --> Chase: saw it again
+    LostTrack --> Search: reached the last known position
 ```
 
 | State | What it does | Leaves when |
@@ -26,7 +35,7 @@ gauge, perception and memory.
 
 Every change records a `HorrorTransition` (from, to, reason, time). `HorrorTransition.Explanation` turns the reason
 into words: *heard a noise*, *spotted the target*, *lost sight of the target*, *gave up the search*... The inspector
-and the Horror AI window show it.
+and the [dashboard](dashboard.md) show it.
 
 The search points come from a small random generator seeded with the enemy's *Search Seed*: the same inputs give the
 same search.

@@ -32,7 +32,7 @@ and a Unity Event prepares its listeners the first time it fires. So that they n
 
 `HorrorAI.Stats.AllocatedBytes` reports what the update allocated, from Unity's profiler: the `GC.Alloc` marker counts
 the allocations made on the update's thread, and `GC Allocated In Frame` gives their size (memory allocated by other
-threads at the same time is not counted). It is shown in the Horror AI window, and is -1 in a release player, where
+threads at the same time is not counted). It is shown in the [dashboard](dashboard.md), and is -1 in a release player, where
 these counters do not exist. The tests check that a deliberate 4 KB allocation is seen, that another thread's is not,
 and that perception, every first change of mind and Unity Events with persistent listeners allocate nothing
 (`Is.Not.AllocatingGCMemory()`). NavMesh Agents are not placed on the NavMesh in Edit Mode (a test checks it), so the
@@ -50,6 +50,16 @@ after 120 warm-up frames. Two runs:
 | | 2 | 0.044 / 0.058 / 0.259 ms | 12.6 | 8.3 | 0 B in 1,800 frames | 14 Patrol, 3 Investigate, 29 Search, 4 Chase |
 | 50 enemies, dark scene (lights off) | 1 | 0.044 / 0.059 / 0.162 ms | 12.1 | 8.3 | 0 B in 1,800 frames | 23 Patrol, 2 Investigate, 24 Search, 1 Chase |
 | | 2 | 0.045 / 0.059 / 0.471 ms | 12.0 | 8.3 | 0 B in 1,800 frames | 20 Patrol, 3 Investigate, 25 Search, 2 Chase |
+
+Run again after the dashboard was added (its calls are in the update, the window closed, as in a game):
+
+| Scenario | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC allocated |
+|---|---:|---:|---:|---:|
+| 50 enemies, lit scene | 0.043 / 0.057 / 0.808 ms | 12.0 | 8.3 | 0 B in 1,800 frames |
+| 50 enemies, dark scene | 0.043 / 0.057 / 0.653 ms | 11.8 | 8.3 | 0 B in 1,800 frames |
+
+The maximum is a single frame (the editor's own work landing in the measured span); the averages and 95th percentiles
+did not move.
 
 The warm-up frames allocated 0 B too. Intel Core i7-14700KF, Unity 6000.3.13f1, Editor Play Mode in batch mode. The
 script fails if the average reaches 0.1 ms, if any byte is allocated after the warm-up, or if the allocations cannot

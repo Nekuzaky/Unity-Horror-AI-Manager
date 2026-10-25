@@ -23,6 +23,33 @@ when lit and close, about 3.2 s in the dark close by, and about 9.2 s in the dar
 Perception Profile inspector computes these times with the current ambient light. Once the target is out of sight, the gauge holds
 for *Decay Delay* seconds, then loses *Suspicion Decay* per second.
 
+### Detection times
+
+How long a Patroller needs to spot a fully visible target (every body point in view), with the default ambient light.
+Half hidden behind cover, the times double.
+
+| Light on the target | Standing, 3 m | Standing, 10 m | Standing, 18 m | Crouched, 3 m | Crouched, 10 m | Crouched, 18 m |
+|---|---:|---:|---:|---:|---:|---:|
+| Lit (exposure 100%) | 0.5 s | 0.7 s | 1.4 s | 1.0 s | 1.4 s | 2.9 s |
+| Dim (exposure 30%) | 1.3 s | 1.9 s | 3.7 s | 2.6 s | 3.7 s | 7.4 s |
+| Dark (ambient 4%) | 3.2 s | 4.6 s | 9.2 s | 6.4 s | 9.2 s | 18.4 s |
+
+The dashboard shows the same number live for the picked enemy (**Gauge full in**), and the **Archetypes** tab and the
+Perception Profile inspector compute it for each profile.
+
+### Tuning light and crouching
+
+- **Darkness should feel safe, not invisible.** *Dark Gain* sets how much the dark slows the gauge: 0.12 makes it about
+  eight times slower than under a lamp. Lower it for a game about hiding, raise it toward 0.4 for a hunter that sees
+  well at night.
+- **Crouching** halves the speed (*Crouch Visibility* on the target) and lowers the body points (*Crouch Height*), so
+  low cover hides the whole body. For a stealth game where crouching is the main tool, try 0.3.
+- **A flashlight is a choice.** With **Reveals Its Holder**, the holder counts as lit to at least *Holder Exposure*
+  (0.7) while it is on: the dark row of the table becomes almost the lit one.
+- **Ambient light** (`HorrorAI.AmbientLight`) is the floor of every exposure: raise it for a moonlit level instead of
+  marking every window.
+- **Far Gain** makes distant targets slower to notice; *Close Range* is where distance stops mattering.
+
 The gauge drives the [behavior](behavior.md): above *Alert Threshold* the enemy stops and stares, at 100 % while
 seeing the target it **spots** it and chases.
 

@@ -1,5 +1,7 @@
 # Debugging
 
+![Scene view gizmos during a chase](../../../docs/images/scene-gizmos.png)
+
 ## Scene view
 
 Every enemy draws its **view cone** in the color of its state: green (Patrol), yellow (Alert), orange
@@ -16,22 +18,12 @@ enemy, and every noise draws a blue ring that
 grows to its loudness. Patrol routes draw their waypoints, waits and loop; selected lights draw their range and beam;
 targets draw their body points, brighter when lit.
 
-## The Horror AI window
+## The dashboard
 
-Open it with **Tools > Horror AI > Open Horror AI** (Ctrl+Shift+Alt+H; Cmd+Shift+Alt+H on macOS).
-**Tools > Horror AI > Documentation** and **GitHub Repository** open these pages. In Play Mode, the window lists every running enemy with:
-
-- its **state** and **suspicion**;
-- the **last change**: from, to, why and how long ago (*Alert → Investigate because it went to check, 0.4 s ago*);
-- what it **sees and hears** now (*sees 67% of the target, lit 85%; heard a noise 1.2 s ago*);
-- its **memory** (*Sight, 92% sure, 0.3 s old*).
-
-The first line shows the cost of the last frame: milliseconds, perceptions, raycasts against the budget, deferred
-perceptions and the bytes the update allocated (from Unity's profiler counters; *allocation not measured* in a
-release player, where they do not exist). Click an enemy's name to select it.
-
-Outside Play Mode, the window lists the enemies of the open scenes and how many problems each inspector reports. It
-refreshes when the hierarchy changes or another scene is opened.
+**Tools > Horror AI > Dashboard** (Ctrl+Shift+Alt+H; Cmd+Shift+Alt+H on macOS) shows every enemy live: its state,
+suspicion, what it perceives and remembers, the history of its changes of mind, the noises and who heard them, the cost
+of the update, and a Setup tab that checks the scene. See [The dashboard](dashboard.md).
+**Tools > Horror AI > Documentation** and **GitHub Repository** open these pages.
 
 ## The inspectors
 

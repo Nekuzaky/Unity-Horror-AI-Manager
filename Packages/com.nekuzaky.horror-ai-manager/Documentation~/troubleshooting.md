@@ -42,8 +42,30 @@
 The spot it wanted to check is off the NavMesh or somewhere it cannot walk to (a table, a closed room). It walks to the
 nearest point it can reach and searches around it. Bake the NavMesh where enemies should be able to go.
 
-## The Horror AI window is empty
+## The dashboard is empty
 
-It lists running enemies in Play Mode (**Tools > Horror AI > Open Horror AI**). Enemies register when enabled; a
+The Overview, Enemies and Noises tabs list running enemies in Play Mode (**Tools > Horror AI > Dashboard**); in Edit
+Mode, the Enemies tab lists the enemies of the open scenes. Enemies register when enabled; a
 disabled object is not listed. Disabling an enemy sends it back to Patrol (*was disabled*), so music hooked to Chase
 stops; enabling it again starts it with an empty memory.
+
+## FAQ
+
+**Does the dashboard slow the game down?** No. In a build it does not exist: the editor assembly is not shipped and
+the three calls the runtime makes to it are removed by the compiler. In the Editor with the window closed, each call is
+a null check; with it open, recording allocates nothing and the display refreshes ten times a second. See
+[What it costs](dashboard.md#what-it-costs).
+
+**The dashboard shows a few hundred bytes of garbage in the Editor.** The counter measures everything that runs inside
+the update, editor work included. The Windows development player checked by `Tools/Build-Check.ps1` allocates 0 B;
+measure there (or with the benchmark) before worrying.
+
+**Can several enemies share an archetype?** Yes, and they should: the profiles are read, never written, at runtime.
+
+**Can I script my own states?** Not yet. Use `HorrorEnemy.Investigate(position)` and `Calm()` to steer an enemy, and
+the events to react to it. A custom mover (`SetMover`) replaces the NavMesh Agent.
+
+**Does it work in 2D?** No: sight and hearing use 3D physics raycasts and the NavMesh.
+
+**Why does the enemy not chase when it only hears me?** Hearing is capped below a chase (*Hearing Cap*): a noise makes
+it investigate, only sight makes it chase. That keeps it fair.
