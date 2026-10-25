@@ -34,7 +34,8 @@ First release.
   and shared fairly (a deferred enemy goes first next frame), and no managed allocation per frame: the first enemy that
   registers compiles the package's code and runs every behavior path once, and Unity Events are prepared when an enemy
   is enabled. `HorrorAI.Stats.AllocatedBytes` reads Unity's profiler (`GC.Alloc` marker on the update's thread and
-  `GC Allocated In Frame`). 50 NavMesh enemies cost 0.044 ms per frame on average, 0 B allocated (see Verified).
+  `GC Allocated In Frame`). 50 NavMesh enemies cost 0.044 to 0.050 ms per frame on average over three runs, 0 B
+  allocated (see Verified).
 - **Editor:** plain-word inspectors with one-click fixes (bake a NavMesh, add a Horror Target to the player, use the
   Patroller preset, add a NavMesh Agent, create a patrol route, mark every light, add a collider or a Rigidbody);
   **GameObject > Horror AI** menus; Scene view gizmos (view cone, hearing radius, suspicion bar, last known position,
@@ -55,7 +56,8 @@ First release.
   `[Conditional("UNITY_EDITOR")]`, removed from players by the compiler (the player's runtime assembly holds none of
   them); in the Editor with the window closed each is a null check. While it is open it records into preallocated
   buffers without allocating, refreshes the visible tab ten times a second, reuses its list rows and cached strings,
-  and allocates nothing when nothing changed (tested). Benchmark unchanged: 0.043 ms per frame for 50 enemies, 0 B.
+  and allocates nothing when nothing changed (tested). Benchmark with it: 0.044 to 0.050 ms per frame for 50 enemies
+  over three runs, 0 B.
 - **Icons:** a rounded colored tile with a white glyph for Horror Enemy, Horror Target, Horror Light Source, Noise
   Emitter, Patrol Route, Horror Archetype, Perception Profile, Behavior Profile, the Resonance Noise Map and Bridge,
   the Hindsight probe and the dashboard, shown in the Inspector, the Project window and the Add Component menu, and
@@ -109,13 +111,47 @@ An independent verification of the release candidate found these problems; each 
 - **Repository:** Git LFS is no longer used (`.gitattributes` and the CI checkout), and the UTF-8 byte order marks were
   removed from the workflow, `.gitignore` and `.gitattributes`.
 
+A second verification, of the dashboard, the icons and the media, found these; each has a test unless stated otherwise.
+
+- **Garbage shown in the Editor:** the 616 to 684 B the dashboard showed on a change of mind were wrongly put down to
+  editor work at the first change. The real cause: while an Inspector shows a `Horror Enemy` whose Unity Events have
+  persistent listeners, Unity rebuilds those listeners by reflection (`UnityEventBase.RebuildPersistentCallsIfNeeded`)
+  at every change of mind of that enemy. It is Unity's editor-only work, not the dashboard's, and players allocate 0 B.
+  The dashboard page and the FAQ now say so (no test; it cannot be avoided from the package without bypassing Unity).
+- **Noises tab:** with many enemies the 256 last hearings were overwritten within seconds and noises said *nobody*.
+  The dashboard now keeps, for each of the 64 listed noises, how many enemies heard it, the six loudest by name and how
+  many found it too faint, in buffers allocated once (tested with 50 enemies, and that recording allocates nothing).
+  An empty list says *No noise yet* instead of Unity's *List is empty*.
+- **Scene changes in Edit Mode:** opening, creating or switching scenes now refreshes the dashboard, and the Enemies
+  list drops destroyed enemies.
+- **After Play Mode:** the Overview kept the last cost, graphs and counts; they are now reset. In Edit Mode the card
+  says *Enemies in the scene* and the Enemies tab no longer shows the archetype in the Target column.
+- **Narrow window:** below 600 px the Enemies tab stacks the list above the panel and hides the distance and reason
+  columns; state chips keep their width; the garbage card wraps instead of overflowing (no test for the layout itself;
+  checked in the captured screenshots).
+- **Add a Horror Target to the player** fell back to the selected object (the NavMesh after **Bake a NavMesh**). With
+  no object tagged `Player` and no main camera it now creates a `Player` object, and Setup warns, with **Move it to the
+  player**, when a target sits on a static object, a NavMesh Surface or an enemy, instead of reporting it as fine.
+- **Icons:** the `.png.meta` files had a stray line from another project (invalid YAML) and generated mipmaps; both are
+  fixed. `HorrorEnemy.Perception.cs` now has the enemy's icon in the Project window.
+- **Media:** the first frame of the demo GIF showed the NavMesh overlay; the recording now starts paused, with the
+  capture frame rate set before entering Play Mode, so the run is the same every time; the frame rate is reset right
+  after the recording, so the dashboard screenshots show real times; the README caption matches how the GIF ends
+  (no test; checked in the regenerated media).
+- **Benchmark figures** quote the range of three runs instead of the lowest one.
+- **`Tools/Render-Brand.ps1`** runs the browser with a temporary profile and closes it when done (no test).
+
 ### Verified
 
-- 111 EditMode tests pass (96 before the dashboard; 104 with Resonance 0.6.0 and Hindsight installed, measured before
-  the dashboard and not re-run since).
-- After the dashboard and the icons: `Tools/Benchmark.ps1` gives 0.043 ms per frame on average for 50 enemies (p95
-  0.057 ms), 0 B allocated; `Tools/Build-Check.ps1` finds only the runtime assembly in the player, no call to the
-  dashboard in it, and 0 B allocated.
-- `Tools/Benchmark.ps1`, run twice: 50 NavMesh enemies cost 0.044 / 0.045 ms per frame on average (p95 0.058 to
-  0.059 ms), and the update allocated 0 B on every one of the 3,840 frames of each run, warm-up included.
+- 118 EditMode tests pass (96 before the dashboard, 111 before the second verification; 104 with Resonance 0.6.0 and
+  Hindsight installed, measured before the dashboard and not re-run since).
+- For the release, with the dashboard, the icons and the fixes above: `Tools/Benchmark.ps1` run three times gives 0.044
+  to 0.050 ms per frame on average for 50 enemies (p95 0.057 to 0.079 ms), 0 B allocated in every frame;
+  `Tools/Build-Check.ps1` finds only the runtime assembly in the player, no call to the dashboard in it, and 0 B
+  allocated.
+- Before the dashboard, `Tools/Benchmark.ps1` run twice: 50 NavMesh enemies cost 0.044 / 0.045 ms per frame on
+  average (p95 0.058 to 0.059 ms), and the update allocated 0 B on every one of the 3,840 frames of each run, warm-up
+  included.
 - `Tools/Build-Check.ps1`: in a Windows development player the enemy reacts to a noise and the update allocates 0 B.
+
+[0.1.0]: https://github.com/Nekuzaky/Unity-Horror-AI-Manager/releases/tag/v0.1.0

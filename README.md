@@ -6,10 +6,10 @@
   <a href="https://github.com/Nekuzaky/Unity-Horror-AI-Manager/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/Nekuzaky/Unity-Horror-AI-Manager/actions/workflows/tests.yml/badge.svg"></a>
   <img alt="Unity 6000.3 or newer" src="https://img.shields.io/badge/Unity-6000.3%2B-1b1d24?logo=unity&logoColor=white">
   <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-e2525c">
-  <img alt="50 enemies: 0.043 ms per frame" src="https://img.shields.io/badge/50%20enemies-0.043%20ms-3ddc84">
+  <img alt="50 enemies: 0.044 to 0.050 ms per frame" src="https://img.shields.io/badge/50%20enemies-0.044%E2%80%930.050%20ms-3ddc84">
   <img alt="GC per frame: 0 B, measured" src="https://img.shields.io/badge/GC%20per%20frame-0%20B%20measured-3ddc84">
   <img alt="Dashboard cost in builds: 0" src="https://img.shields.io/badge/dashboard%20in%20builds-0%20cost-3ddc84">
-  <img alt="Tests: 111 EditMode" src="https://img.shields.io/badge/tests-111%20EditMode-38bdf8">
+  <img alt="Tests: 118 EditMode" src="https://img.shields.io/badge/tests-118%20EditMode-38bdf8">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-8b92a2"></a>
 </p>
 
@@ -27,12 +27,13 @@ once, and crouching behind a crate actually hides you.
 **Hide in the dark. Hold your breath. Do not run.**
 
 <p align="center">
-  <img src="docs/images/horror-ai-demo.gif" alt="The demo from above: the enemy patrols, hears a bottle fall, investigates, searches, spots the player under a lamp, chases, then loses the trail" width="100%">
+  <img src="docs/images/horror-ai-demo.gif" alt="The demo from above: the enemy patrols, hears a bottle fall, investigates, searches, spots the player under a lamp, chases, loses the trail and goes to check where it last saw the player" width="100%">
 </p>
 
 <p align="center"><sub>The greybox demo from above, with the Scene view gizmos. The enemy patrols (green), hears a bottle
 fall (yellow, then orange as it goes to check), searches (purple), spots the player walking under the hall lamp and
-chases (red), then loses the trail (pink) when the player runs behind the walls, and goes back to searching.
+chases (red), then loses the trail (pink) when the player runs behind the walls, and goes to check where it last
+saw them (orange).
 <a href="docs/images/horror-ai-demo.mp4">MP4</a></sub></p>
 
 ## Why
@@ -66,7 +67,7 @@ you *why* the monster did what it did.
 - **Icons for everything**: each component and asset has its own icon in the Inspector, the Project window and the Add
   Component menu.
 - **Built for many enemies.** Perception spread over frames, a global raycast budget, and nothing allocated per frame,
-  measured with Unity's profiler counters: fifty enemies cost 0.043 ms per frame.
+  measured with Unity's profiler counters: fifty enemies cost 0.044 to 0.050 ms per frame.
 - **Optional integrations** with [Resonance](https://github.com/Nekuzaky/Resonance) (its sounds are heard by enemies)
   and [Hindsight](https://github.com/Nekuzaky/Hindsight) (records each enemy's state and bookmarks every change of mind).
 
@@ -104,7 +105,11 @@ In Unity: **Window > Package Manager > + > Install package from git URL...** and
 https://github.com/Nekuzaky/Unity-Horror-AI-Manager.git?path=/Packages/com.nekuzaky.horror-ai-manager
 ```
 
-Pin a release by adding its tag, for example `...?path=/Packages/com.nekuzaky.horror-ai-manager#v0.1.0`.
+Pin a release by adding its tag after the path:
+
+```
+https://github.com/Nekuzaky/Unity-Horror-AI-Manager.git?path=/Packages/com.nekuzaky.horror-ai-manager#v0.1.0
+```
 
 ## Quick start
 
@@ -167,12 +172,13 @@ public class ChaseMusic : MonoBehaviour
 ## Performance
 
 Measured in real Play Mode with `Tools/Benchmark.ps1`: 50 NavMesh enemies around one moving target, 1,800 frames per
-scenario at 60 fps after 120 warm-up frames, Intel Core i7-14700KF, Unity 6000.3.13f1.
+scenario at 60 fps after 120 warm-up frames, Intel Core i7-14700KF, Unity 6000.3.13f1. Three runs; each cell gives the
+lowest and highest of the three.
 
 | Scenario | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC allocated by the update |
 |---|---:|---:|---:|---:|
-| 50 enemies, lit scene (8 lamps + flashlight) | 0.043 / 0.057 / 0.808 ms | 12.0 | 8.3 | 0 B in 1,800 frames |
-| 50 enemies, dark scene (lights off) | 0.043 / 0.057 / 0.653 ms | 11.8 | 8.3 | 0 B in 1,800 frames |
+| 50 enemies, lit scene (8 lamps + flashlight) | 0.045–0.046 / 0.059–0.064 / 0.26–0.30 ms | 11.9–12.4 | 8.3 | 0 B in 1,800 frames, each run |
+| 50 enemies, dark scene (lights off) | 0.044–0.050 / 0.057–0.079 / 0.10–1.52 ms | 12.4–12.8 | 8.3 | 0 B in 1,800 frames, each run |
 
 The time covers the whole Horror AI update on the main thread: light exposure, sight and hearing raycasts, the state
 machines and the NavMesh destinations they set. The garbage is read every frame from Unity's profiler. A Windows

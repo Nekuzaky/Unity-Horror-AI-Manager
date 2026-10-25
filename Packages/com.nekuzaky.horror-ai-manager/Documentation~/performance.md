@@ -42,7 +42,7 @@ allocation of the update with real agents is measured by the benchmark, in Play 
 
 `Tools/Benchmark.ps1` plays two scenarios in real Play Mode: 50 enemies with NavMesh Agents around one target that
 walks in a circle among walls, with 8 lamps and a flashlight on, then all lights off. 1,800 frames each at 60 fps,
-after 120 warm-up frames. Two runs:
+after 120 warm-up frames. Two runs before the dashboard was added:
 
 | Scenario | Run | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC allocated by the update | States at the end |
 |---|---|---:|---:|---:|---:|---|
@@ -51,15 +51,20 @@ after 120 warm-up frames. Two runs:
 | 50 enemies, dark scene (lights off) | 1 | 0.044 / 0.059 / 0.162 ms | 12.1 | 8.3 | 0 B in 1,800 frames | 23 Patrol, 2 Investigate, 24 Search, 1 Chase |
 | | 2 | 0.045 / 0.059 / 0.471 ms | 12.0 | 8.3 | 0 B in 1,800 frames | 20 Patrol, 3 Investigate, 25 Search, 2 Chase |
 
-Run again after the dashboard was added (its calls are in the update, the window closed, as in a game):
+Run three times again for the release, with the dashboard (its calls are in the update, the window closed, as in a
+game):
 
-| Scenario | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC allocated |
-|---|---:|---:|---:|---:|
-| 50 enemies, lit scene | 0.043 / 0.057 / 0.808 ms | 12.0 | 8.3 | 0 B in 1,800 frames |
-| 50 enemies, dark scene | 0.043 / 0.057 / 0.653 ms | 11.8 | 8.3 | 0 B in 1,800 frames |
+| Scenario | Run | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC allocated by the update | States at the end |
+|---|---|---:|---:|---:|---:|---|
+| 50 enemies, lit scene (8 lamps + flashlight) | 1 | 0.045 / 0.059 / 0.301 ms | 12.4 | 8.3 | 0 B in 1,800 frames | 12 Patrol, 2 Investigate, 31 Search, 5 Chase |
+| | 2 | 0.046 / 0.064 / 0.284 ms | 11.9 | 8.3 | 0 B in 1,800 frames | 14 Patrol, 3 Investigate, 28 Search, 5 Chase |
+| | 3 | 0.045 / 0.062 / 0.264 ms | 12.0 | 8.3 | 0 B in 1,800 frames | 12 Patrol, 3 Investigate, 30 Search, 5 Chase |
+| 50 enemies, dark scene (lights off) | 1 | 0.044 / 0.057 / 0.096 ms | 12.6 | 8.3 | 0 B in 1,800 frames | 17 Patrol, 5 Investigate, 26 Search, 2 Chase |
+| | 2 | 0.050 / 0.079 / 0.347 ms | 12.8 | 8.3 | 0 B in 1,800 frames | 24 Patrol, 2 Investigate, 23 Search, 1 Chase |
+| | 3 | 0.047 / 0.064 / 1.520 ms | 12.4 | 8.3 | 0 B in 1,800 frames | 18 Patrol, 1 Alert, 4 Investigate, 26 Search, 1 Chase |
 
-The maximum is a single frame (the editor's own work landing in the measured span); the averages and 95th percentiles
-did not move.
+So 0.044 to 0.050 ms per frame on average, 0.057 to 0.079 ms at the 95th percentile. The maximum is a single frame
+(the editor's own work landing in the measured span) and varies most from run to run.
 
 The warm-up frames allocated 0 B too. Intel Core i7-14700KF, Unity 6000.3.13f1, Editor Play Mode in batch mode. The
 script fails if the average reaches 0.1 ms, if any byte is allocated after the warm-up, or if the allocations cannot
