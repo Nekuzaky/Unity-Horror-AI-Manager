@@ -20,7 +20,7 @@ namespace Nekuzaky.HorrorAI.Dev
                 scenes = new[] { Scene },
                 locationPathName = Path.Combine(output, "HorrorAIDemo.exe"),
                 target = BuildTarget.StandaloneWindows64,
-                options = BuildOptions.None,
+                options = BuildOptions.Development,
                 extraScriptingDefines = new[] { "HORROR_AI_BUILD_PROBE" }
             };
             var report = BuildPipeline.BuildPlayer(options);

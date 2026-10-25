@@ -3,12 +3,12 @@
     Builds the demo for Windows and proves Horror AI Manager works in a real player, without editor code and without garbage.
 .DESCRIPTION
     Checks that:
-    - the build succeeds;
+    - the build succeeds (a development player: release players have no profiler counters to measure garbage);
     - the player holds the runtime assembly only: no editor, test, development or integration assembly;
     - the player runs the demo for a few seconds (batch mode, no graphics) without any exception;
     - a probe compiled only into this build (Assets/Dev/BuildProbe, HORROR_AI_BUILD_PROBE) makes a noise next to the
       enemy, and the enemy reacts: at least one state change is logged;
-    - the Horror AI update allocated 0 B in the player once warmed up.
+    - the Horror AI update allocated 0 B in the player once warmed up, measured with Unity's profiler counters.
 .EXAMPLE
     ./Tools/Build-Check.ps1
 #>
@@ -47,13 +47,14 @@ Select-String -Path $playerLog -Pattern '\[BuildProbe\]' | ForEach-Object { Writ
 
 $exceptions = @(Select-String -Path $playerLog -Pattern 'Exception')
 if ($exceptions.Count -gt 0) { $problems.Add("The player logged $($exceptions.Count) exception line(s). Log: $playerLog") }
-$summary = Select-String -Path $playerLog -Pattern '\[BuildProbe\] summary: enemies=(\d+) transitions=(\d+) frames=(\d+) averageMs=([\d.]+) allocatedBytes=(\d+)' | Select-Object -First 1
+$summary = Select-String -Path $playerLog -Pattern '\[BuildProbe\] summary: enemies=(\d+) transitions=(\d+) frames=(\d+) averageMs=([\d.]+) allocatedBytes=(\d+) unmeasuredFrames=(\d+)' | Select-Object -First 1
 if (-not $summary) {
     $problems.Add("The probe did not report. Log: $playerLog")
 } else {
     $groups = $summary.Matches[0].Groups
     if ([int]$groups[1].Value -lt 1) { $problems.Add('No enemy was running in the player.') }
     if ([int]$groups[2].Value -lt 1) { $problems.Add('The enemy did not react to the noise in the player.') }
+    if ([int]$groups[6].Value -ne 0) { $problems.Add("The allocations of the Horror AI update could not be measured on $($groups[6].Value) frame(s) in the player.") }
     if ([long]$groups[5].Value -ne 0) { $problems.Add("The Horror AI update allocated $($groups[5].Value) B in the player.") }
 }
 

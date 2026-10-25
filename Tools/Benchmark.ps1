@@ -4,8 +4,9 @@
 .DESCRIPTION
     Plays two scenarios with 50 NavMesh enemies perceiving one moving target, in a lit scene (8 lamps and a
     flashlight) and in a dark one, and reports the main-thread time of the Horror AI update per frame (perception,
-    behavior and NavMesh destinations), raycasts, perceptions and garbage per frame. Fails if the average reaches
-    0.1 ms or if any garbage is allocated.
+    behavior and NavMesh destinations), raycasts, perceptions and the garbage the update allocated, read every frame
+    from Unity's "GC Allocated In Frame" profiler counter. Fails if the average reaches 0.1 ms, if any byte is
+    allocated after the warm-up, or if the allocations could not be measured.
 .EXAMPLE
     ./Tools/Benchmark.ps1
 #>
@@ -34,11 +35,11 @@ $failed = $false
 foreach ($row in $rows) {
     $cells = $row.Split('|') | ForEach-Object { $_.Trim() }
     $average = [double]::Parse(($cells[2].Split('/')[0].Trim()), [Globalization.CultureInfo]::InvariantCulture)
-    $garbage = [int]($cells[5] -replace '[^0-9]', '')
+    if ($cells[5] -match '^(\d+) B in (\d+) of') { $garbage = [long]$Matches[1] } else { $garbage = -1 }
     if ($average -ge 0.1 -or $garbage -ne 0) { $failed = $true }
 }
 if ($rows.Count -eq 0 -or $failed) {
-    Write-Host 'Benchmark target missed: 0.1 ms average and 0 B per frame.' -ForegroundColor Red
+    Write-Host 'Benchmark target missed: 0.1 ms average and 0 B allocated after the warm-up.' -ForegroundColor Red
     exit 1
 }
-Write-Host 'Benchmark target met: under 0.1 ms per frame on average and 0 B of garbage.' -ForegroundColor Green
+Write-Host 'Benchmark target met: under 0.1 ms per frame on average and 0 B allocated after the warm-up.' -ForegroundColor Green

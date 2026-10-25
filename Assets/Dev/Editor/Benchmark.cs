@@ -34,6 +34,9 @@ namespace Nekuzaky.HorrorAI.Dev
             public double Rays;
             public double Perceptions;
             public long Allocated;
+            public int AllocatingFrames;
+            public long WarmupAllocated;
+            public bool Measured;
             public string States;
         }
 
@@ -45,8 +48,13 @@ namespace Nekuzaky.HorrorAI.Dev
         private static int _scenario;
         private static int _frame;
         private static long _allocated;
+        private static int _allocatingFrames;
+        private static long _warmupAllocated;
+        private static bool _measured;
         private static long _rays;
         private static long _perceptions;
+        private static readonly HorrorTransition[] FrameTransitions = new HorrorTransition[16];
+        private static int _frameTransitions;
         private static GameObject _root;
         private static Transform _target;
 
@@ -90,6 +98,7 @@ namespace Nekuzaky.HorrorAI.Dev
         private static void Begin()
         {
             FrameDriver.Tick = Step;
+            HorrorAI.StateChanged += Record;
             Time.captureFramerate = 60;
             _scenario = 0;
             Setup();
@@ -99,18 +108,42 @@ namespace Nekuzaky.HorrorAI.Dev
         {
             var t = _frame / 60f;
             _target.position = new Vector3(Mathf.Cos(t * 0.25f) * 5f, 0f, Mathf.Sin(t * 0.25f) * 5f);
+            if (_frame < WarmupFrames)
+                _warmupAllocated += Math.Max(0L, HorrorAI.Stats.AllocatedBytes);
             if (_frame >= WarmupFrames)
             {
                 var stats = HorrorAI.Stats;
                 var index = _frame - WarmupFrames;
                 Costs[index] = stats.Milliseconds;
-                _allocated += stats.AllocatedBytes;
+                _measured &= stats.AllocatedBytes >= 0;
+                if (stats.AllocatedBytes > 0)
+                {
+                    _allocated += stats.AllocatedBytes;
+                    _allocatingFrames++;
+                    Debug.Log($"[HorrorAI] Benchmark frame {_frame}: the update allocated {stats.AllocatedBytes} B{Describe()}");
+                }
                 _rays += stats.Raycasts;
                 _perceptions += stats.Perceptions;
             }
+            _frameTransitions = 0;
             _frame++;
             if (_frame >= WarmupFrames + MeasuredFrames)
                 Finish();
+        }
+
+        private static void Record(HorrorEnemy enemy, HorrorTransition transition)
+        {
+            if (_frameTransitions < FrameTransitions.Length)
+                FrameTransitions[_frameTransitions++] = transition;
+        }
+
+        private static string Describe()
+        {
+            var text = new StringBuilder();
+            for (var i = 0; i < _frameTransitions; i++)
+                text.Append(i == 0 ? ", changes of mind: " : ", ").Append(FrameTransitions[i].From).Append(" > ").Append(FrameTransitions[i].To)
+                    .Append(" (").Append(FrameTransitions[i].Reason).Append(')');
+            return text.ToString();
         }
 
         private static void Setup()
@@ -124,6 +157,9 @@ namespace Nekuzaky.HorrorAI.Dev
             BuildEnemies(_root.transform);
             _frame = 0;
             _allocated = 0;
+            _allocatingFrames = 0;
+            _warmupAllocated = 0;
+            _measured = true;
             _rays = 0;
             _perceptions = 0;
             Array.Clear(Costs, 0, Costs.Length);
@@ -220,6 +256,9 @@ namespace Nekuzaky.HorrorAI.Dev
                 Rays = _rays / (double)MeasuredFrames,
                 Perceptions = _perceptions / (double)MeasuredFrames,
                 Allocated = _allocated,
+                AllocatingFrames = _allocatingFrames,
+                WarmupAllocated = _warmupAllocated,
+                Measured = _measured,
                 States = CountStates()
             });
             Object.Destroy(_root);
@@ -255,15 +294,20 @@ namespace Nekuzaky.HorrorAI.Dev
         {
             var culture = System.Globalization.CultureInfo.InvariantCulture;
             var text = new StringBuilder();
-            text.AppendLine("| Scenario | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC per frame | States at the end |");
+            text.AppendLine("| Scenario | Horror AI per frame (avg / p95 / max) | Raycasts per frame | Perceptions per frame | GC allocated (total, frames) | States at the end |");
             text.AppendLine("|---|---:|---:|---:|---:|---|");
             foreach (var r in Results)
             {
-                text.AppendLine(string.Format(culture, "| {0} | {1:0.000} / {2:0.000} / {3:0.000} ms | {4:0.0} | {5:0.0} | {6} B | {7} |",
-                    r.Name, r.Average, r.P95, r.Max, r.Rays, r.Perceptions, r.Allocated / MeasuredFrames, r.States));
+                var garbage = r.Measured ? string.Format(culture, "{0} B in {1} of {2} frames", r.Allocated, r.AllocatingFrames, MeasuredFrames) : "not measured";
+                text.AppendLine(string.Format(culture, "| {0} | {1:0.000} / {2:0.000} / {3:0.000} ms | {4:0.0} | {5:0.0} | {6} | {7} |",
+                    r.Name, r.Average, r.P95, r.Max, r.Rays, r.Perceptions, garbage, r.States));
             }
             text.AppendLine();
-            text.AppendLine(string.Format(culture, "Measured on {0}, {1} logical cores, Unity {2}, Editor Play Mode in batch mode, {3:N0} frames per scenario at 60 simulated fps after {4} warm-up frames. Raycast budget {5}.",
+            foreach (var r in Results)
+                text.AppendLine(string.Format(culture, "- {0}: the update allocated {1} B during the {2} warm-up frames.", r.Name, r.WarmupAllocated, WarmupFrames));
+            text.AppendLine();
+            text.AppendLine(string.Format(culture, "Measured on {0}, {1} logical cores, Unity {2}, Editor Play Mode in batch mode, {3:N0} frames per scenario at 60 simulated fps after {4} warm-up frames. Raycast budget {5}. " +
+                "GC is the managed memory the Horror AI update allocated on the main thread, every frame, from Unity's \"GC.Alloc\" profiler marker and \"GC Allocated In Frame\" counter.",
                 SystemInfo.processorType.Trim(), SystemInfo.processorCount, Application.unityVersion, MeasuredFrames, WarmupFrames, HorrorAI.RaycastBudget));
             var output = SessionState.GetString(OutputKey, Path.Combine("Tools", "Output", "benchmark"));
             File.WriteAllText(Path.Combine(output, "benchmark.md"), text.ToString());

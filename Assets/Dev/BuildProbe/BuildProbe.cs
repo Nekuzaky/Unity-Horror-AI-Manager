@@ -14,8 +14,12 @@ namespace Nekuzaky.HorrorAI.Dev
         private int _measured;
         private double _milliseconds;
         private long _allocated;
+        private int _unmeasured;
         private int _transitions;
         private bool _noised;
+        private int _pending;
+        private static readonly HorrorTransition[] Pending = new HorrorTransition[32];
+        private static readonly HorrorEnemy[] PendingEnemies = new HorrorEnemy[32];
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -32,19 +36,43 @@ namespace Nekuzaky.HorrorAI.Dev
 
         private void OnStateChanged(HorrorEnemy enemy, HorrorTransition transition)
         {
-            _transitions++;
-            Debug.Log("[BuildProbe] " + enemy.name + ": " + transition.From + " > " + transition.To + " (" + transition.Explanation + ")");
+            if (_pending < Pending.Length)
+            {
+                PendingEnemies[_pending] = enemy;
+                Pending[_pending++] = transition;
+            }
+        }
+
+        private void LogTransitions()
+        {
+            for (var i = 0; i < _pending; i++)
+            {
+                _transitions++;
+                var transition = Pending[i];
+                var name = PendingEnemies[i] != null ? PendingEnemies[i].name : "Enemy";
+                Debug.Log("[BuildProbe] " + name + ": " + transition.From + " > " + transition.To + " (" + transition.Explanation + ")");
+                PendingEnemies[i] = null;
+            }
+            _pending = 0;
         }
 
         private void Update()
         {
+            LogTransitions();
             _frames++;
             var stats = HorrorAI.Stats;
             if (_frames > WarmupFrames)
             {
                 _measured++;
                 _milliseconds += stats.Milliseconds;
-                _allocated += stats.AllocatedBytes;
+                if (stats.AllocatedBytes < 0)
+                    _unmeasured++;
+                else if (stats.AllocatedBytes > 0)
+                {
+                    _allocated += stats.AllocatedBytes;
+                    Debug.Log("[BuildProbe] frame " + _frames + " at " + Time.time.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture) +
+                              " s: the update allocated " + stats.AllocatedBytes + " B, state " + (HorrorAI.Enemies.Count > 0 ? HorrorAI.Enemies[0].State.ToString() : "-"));
+                }
             }
             if (!_noised && Time.time >= NoiseAt && HorrorAI.Enemies.Count > 0)
             {
@@ -57,7 +85,7 @@ namespace Nekuzaky.HorrorAI.Dev
                 return;
             Debug.Log("[BuildProbe] summary: enemies=" + stats.Enemies + " transitions=" + _transitions + " frames=" + _measured +
                       " averageMs=" + (_measured > 0 ? _milliseconds / _measured : 0d).ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture) +
-                      " allocatedBytes=" + _allocated);
+                      " allocatedBytes=" + _allocated + " unmeasuredFrames=" + _unmeasured);
             Application.Quit(0);
             enabled = false;
         }
