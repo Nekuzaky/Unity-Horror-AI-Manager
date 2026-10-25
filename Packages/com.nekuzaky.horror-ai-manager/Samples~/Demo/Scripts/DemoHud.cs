@@ -19,6 +19,8 @@ namespace Nekuzaky.HorrorAI.Demo
         private float _flash;
         private GUIStyle _style;
 
+        private static string Percent(float value) => Mathf.RoundToInt(value * 100f).ToString(System.Globalization.CultureInfo.InvariantCulture) + "%";
+
         private void Update() => _flash = Mathf.Max(0f, _flash - Time.deltaTime * 0.8f);
 
         private void OnGUI()
@@ -38,10 +40,10 @@ namespace Nekuzaky.HorrorAI.Demo
             {
                 var lit = player.target.Exposure;
                 GUILayout.Label($"You are {(player.target.Crouching ? "crouching" : player.Running ? "running" : "walking")}, " +
-                                $"lit {lit:P0}{(player.flashlight != null && player.flashlight.On ? " (flashlight on)" : string.Empty)}. Caught {player.Caught} time(s).", _style);
+                                $"lit {Percent(lit)}{(player.flashlight != null && player.flashlight.On ? " (flashlight on)" : string.Empty)}. Caught {player.Caught} time(s).", _style);
             }
             if (enemy != null)
-                GUILayout.Label($"Enemy: <b>{enemy.State}</b>, suspicion {enemy.Suspicion:P0}, last: {enemy.LastTransition.Explanation}", _style);
+                GUILayout.Label($"Enemy: <b>{enemy.State}</b>, suspicion {Percent(enemy.Suspicion)}, last: {enemy.LastTransition.Explanation}", _style);
             GUILayout.EndArea();
         }
 

@@ -32,6 +32,7 @@ namespace Nekuzaky.HorrorAI.Dev
             var player = BuildPlayer();
             var enemy = BuildEnemy(route);
             BuildProps();
+            new GameObject("Pipeline Materials").AddComponent<DemoPipelineMaterials>();
             var hud = new GameObject("HUD").AddComponent<DemoHud>();
             hud.player = player;
             hud.enemy = enemy;

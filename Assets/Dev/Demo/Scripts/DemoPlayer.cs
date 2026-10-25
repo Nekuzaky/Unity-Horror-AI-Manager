@@ -51,29 +51,24 @@ namespace Nekuzaky.HorrorAI.Demo
             _spawnRotation = transform.rotation;
         }
 
-#if ENABLE_LEGACY_INPUT_MANAGER
-        private static readonly bool LegacyInput = true;
-#else
-        private static readonly bool LegacyInput = false;
-#endif
         private bool _warned;
 
         private void Update()
         {
-            if (!LegacyInput)
+            if (!DemoInput.Available)
             {
                 if (!_warned)
-                    Debug.LogWarning("[Horror AI demo] The demo player reads the Input Manager: set Active Input Handling to Both in the Player settings.");
+                    Debug.LogWarning("[Horror AI demo] No input backend is active: enable the Input System package or the Input Manager in the Player settings.");
                 _warned = true;
                 return;
             }
-            if (Input.GetMouseButtonDown(0))
+            if (DemoInput.ClickPressed)
                 Cursor.lockState = CursorLockMode.Locked;
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (DemoInput.EscapePressed)
                 Cursor.lockState = CursorLockMode.None;
-            if (Input.GetKeyDown(KeyCode.F) && flashlight != null)
+            if (DemoInput.FlashlightPressed && flashlight != null)
                 flashlight.Toggle();
-            if (Input.GetKeyDown(KeyCode.C) && target != null)
+            if (DemoInput.CrouchPressed && target != null)
                 target.Crouching = !target.Crouching;
             Look();
             Move();
@@ -83,8 +78,9 @@ namespace Nekuzaky.HorrorAI.Demo
         {
             if (Cursor.lockState != CursorLockMode.Locked)
                 return;
-            transform.Rotate(0f, Input.GetAxis("Mouse X") * mouseSensitivity, 0f);
-            _pitch = Mathf.Clamp(_pitch - Input.GetAxis("Mouse Y") * mouseSensitivity, -80f, 80f);
+            var look = DemoInput.Look;
+            transform.Rotate(0f, look.x * mouseSensitivity, 0f);
+            _pitch = Mathf.Clamp(_pitch - look.y * mouseSensitivity, -80f, 80f);
             if (head != null)
                 head.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
         }
@@ -92,9 +88,10 @@ namespace Nekuzaky.HorrorAI.Demo
         private void Move()
         {
             var crouching = target != null && target.Crouching;
-            Running = !crouching && Input.GetKey(KeyCode.LeftShift);
+            Running = !crouching && DemoInput.RunHeld;
             var speed = crouching ? crouchSpeed : Running ? runSpeed : walkSpeed;
-            var input = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
+            var axes = DemoInput.Move;
+            var input = new Vector3(axes.x, 0f, axes.y);
             var move = transform.TransformDirection(Vector3.ClampMagnitude(input, 1f)) * speed;
             _verticalSpeed = _controller.isGrounded ? -1f : _verticalSpeed - 9.81f * Time.deltaTime;
             move.y = _verticalSpeed;

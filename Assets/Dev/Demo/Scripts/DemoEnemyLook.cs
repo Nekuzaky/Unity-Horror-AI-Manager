@@ -13,9 +13,8 @@ namespace Nekuzaky.HorrorAI.Demo
         public void Show(HorrorState state)
         {
             var color = ColorOf(state);
-            if (body != null)
+            if (body != null && _block != null)
             {
-                _block ??= new MaterialPropertyBlock();
                 body.GetPropertyBlock(_block);
                 _block.SetColor(BaseColor, color);
                 _block.SetColor(LegacyColor, color);
@@ -46,6 +45,8 @@ namespace Nekuzaky.HorrorAI.Demo
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
         private static readonly int LegacyColor = Shader.PropertyToID("_Color");
         private MaterialPropertyBlock _block;
+
+        private void Awake() => _block = new MaterialPropertyBlock();
 
         private void Start() => Show(GetComponent<HorrorEnemy>().State);
 
