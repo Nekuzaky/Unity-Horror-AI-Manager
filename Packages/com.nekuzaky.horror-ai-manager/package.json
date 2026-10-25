@@ -2,7 +2,7 @@
   "name": "com.nekuzaky.horror-ai-manager",
   "version": "0.1.0",
   "displayName": "Horror AI Manager",
-  "description": "Enemy AI for horror games. Enemies see with a view cone and a suspicion gauge that fills slowly in the dark and fast in the light, hear noises through walls, remember where you were, and patrol, investigate, search and chase you with a deterministic state machine. Events for every scare, plain-word inspectors, Scene view gizmos, a live debug window, and zero garbage per frame.",
+  "description": "Enemy AI for horror games. Enemies see with a view cone and a suspicion gauge that fills slowly in the dark and fast in the light, hear noises through walls, remember where you were, and patrol, investigate, search and chase you with a deterministic state machine. Events for every scare, plain-word inspectors, Scene view gizmos, a live dashboard, and zero garbage per frame.",
   "unity": "6000.3",
   "documentationUrl": "https://github.com/Nekuzaky/Unity-Horror-AI-Manager/blob/main/Packages/com.nekuzaky.horror-ai-manager/Documentation~/index.md",
   "changelogUrl": "https://github.com/Nekuzaky/Unity-Horror-AI-Manager/blob/main/Packages/com.nekuzaky.horror-ai-manager/CHANGELOG.md",
@@ -29,7 +29,8 @@
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.physics": "1.0.0",
     "com.unity.modules.imgui": "1.0.0",
-    "com.unity.modules.uielements": "1.0.0"
+    "com.unity.modules.uielements": "1.0.0",
+    "com.unity.modules.vectorgraphics": "1.0.0"
   },
   "samples": [
     {
