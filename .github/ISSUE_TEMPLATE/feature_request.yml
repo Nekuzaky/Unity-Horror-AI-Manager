@@ -1,0 +1,21 @@
+﻿name: Feature request
+description: Suggest an idea for Horror AI Manager.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What scare were you building?
+      description: Describe the enemy, the level or the moment where Horror AI Manager did not help you enough.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What would have helped? A new archetype, a sense, an event, a debug view?
+  - type: textarea
+    id: cost
+    attributes:
+      label: Cost
+      description: Fifty enemies cost well under a tenth of a millisecond per frame today. Would your idea add raycasts or run every frame?

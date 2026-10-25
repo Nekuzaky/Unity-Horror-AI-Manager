@@ -1,0 +1,8 @@
+﻿blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/Nekuzaky/Unity-Horror-AI-Manager/blob/main/Packages/com.nekuzaky.horror-ai-manager/Documentation~/index.md
+    about: Guides for every component, the behavior states, scripting and troubleshooting.
+  - name: Security report
+    url: https://github.com/Nekuzaky/Unity-Horror-AI-Manager/security/advisories/new
+    about: Report security problems privately.
