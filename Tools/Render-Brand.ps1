@@ -9,7 +9,8 @@
     Banner and social preview: starts a small local web server, then opens docs/brand/render.html once per image in a
     Chromium browser (Brave, Chrome or Edge when found, else the default browser). The page runs the HTML source in an
     iframe, draws it through an SVG foreignObject onto a canvas and posts the PNG back to the server, which writes it to
-    an allow-listed path in docs/images. Headless browsers are not used: they hang on some machines.
+    an allow-listed path in docs/images. Headless browsers are not used: they hang on some machines. The browser runs
+    with a temporary profile, as its own instance, and the script closes it (and only it) when it is done.
     Pass -Only icons or -Only brand to render one of the two, and -NoBrowser to print the URLs instead.
 .EXAMPLE
     ./Tools/Render-Brand.ps1
@@ -44,6 +45,19 @@ $browsers = @(
     "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
     "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
 ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+
+$browserProfile = Join-Path ([System.IO.Path]::GetTempPath()) ("horrorai-brand-" + [Guid]::NewGuid().ToString('N'))
+
+function Close-Browser {
+    if (-not $browsers -or $NoBrowser) { return }
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -and $_.CommandLine.Contains($browserProfile) } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    for ($i = 0; $i -lt 20 -and (Test-Path $browserProfile); $i++) {
+        Remove-Item $browserProfile -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path $browserProfile) { Start-Sleep -Milliseconds 250 }
+    }
+}
 
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://127.0.0.1:$Port/")
@@ -82,7 +96,7 @@ try {
         $query = "page=$($job.Page)&w=$($job.Width)&h=$($job.Height)&out=$([Uri]::EscapeDataString($job.Out))"
         $url = "http://127.0.0.1:$Port/docs/brand/render.html?$query"
         if ($NoBrowser) { Write-Host "Open: $url" }
-        elseif ($browsers) { Start-Process $browsers -ArgumentList @('--new-window', $url) }
+        elseif ($browsers) { Start-Process $browsers -ArgumentList @("--user-data-dir=`"$browserProfile`"", '--no-first-run', '--no-default-browser-check', '--new-window', $url) }
         else { Start-Process $url }
 
         $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
@@ -97,4 +111,5 @@ try {
 } finally {
     $listener.Stop()
     $listener.Close()
+    Close-Browser
 }

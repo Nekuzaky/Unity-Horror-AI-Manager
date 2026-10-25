@@ -189,8 +189,11 @@ namespace Nekuzaky.HorrorAI.Dev
             if (_broken != null)
                 Object.DestroyImmediate(_broken);
             Dashboard().ShowTab(DashboardWindow.OverviewTab);
+            ShowNavMesh(false);
             CaptureKit.ResetFrames("hero");
             CaptureKit.ResetFrames("dashboard");
+            Time.captureFramerate = (int)Fps;
+            EditorApplication.isPaused = true;
             Advance(Stage.Record, 3.0);
             EditorApplication.EnterPlaymode();
         }
@@ -200,7 +203,11 @@ namespace Nekuzaky.HorrorAI.Dev
             if (!Application.isPlaying)
                 return;
             if (_director == null)
+            {
                 StartDirector();
+                EditorApplication.Step();
+                return;
+            }
             if (Time.frameCount == _lastFrame)
                 return;
             _lastFrame = Time.frameCount;
@@ -219,7 +226,8 @@ namespace Nekuzaky.HorrorAI.Dev
                 Debug.Log("[Capture] frame " + _frame + ", game time " + Time.time.ToString("0.0") + " s, " + _director.Current + ", enemy " + _director.Enemy.State);
             if (_director.Current == DemoDirector.Phase.Done || _frame > MaxFrames)
             {
-                Debug.Log("Recorded " + _frame + " frames");
+                Debug.Log("Recorded " + _frame + " frames, enemy " + _director.Enemy.State);
+                Time.captureFramerate = 0;
                 EditorApplication.isPaused = false;
                 Advance(Stage.Overview, 0.5);
                 return;
