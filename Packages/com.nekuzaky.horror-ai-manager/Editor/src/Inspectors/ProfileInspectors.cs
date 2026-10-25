@@ -95,8 +95,10 @@ namespace Nekuzaky.HorrorAI.Editor
                    " m in the open, " + InspectorKit.Number(walled, "0.#") + " m through one wall.";
         }
 
-        public static string Summary(PerceptionProfile perception, BehaviorProfile behavior) =>
-            Sight(perception) + "\nIt stares for " + InspectorKit.Number(behavior.alertDuration, "0.#") + " s, searches for " +
+        public static string Summary(PerceptionProfile perception, BehaviorProfile behavior) => Sight(perception) + "\n" + Behavior(behavior);
+
+        public static string Behavior(BehaviorProfile behavior) =>
+            "It stares for " + InspectorKit.Number(behavior.alertDuration, "0.#") + " s, searches for " +
             InspectorKit.Number(behavior.searchDuration, "0") + " s within " + InspectorKit.Number(behavior.searchRadius, "0") + " m, and chases at " +
             InspectorKit.Number(behavior.chaseSpeed, "0.#") + " m/s.";
 

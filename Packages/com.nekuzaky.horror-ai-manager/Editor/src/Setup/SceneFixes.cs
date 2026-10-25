@@ -29,7 +29,7 @@ namespace Nekuzaky.HorrorAI.Editor
             var count = 0;
             foreach (var light in Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
             {
-                if (light.type != LightType.Directional && light.GetComponent<HorrorLightSource>() == null)
+                if (NeedsSource(light))
                     count++;
             }
             return count;
@@ -39,7 +39,7 @@ namespace Nekuzaky.HorrorAI.Editor
         {
             foreach (var light in Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
             {
-                if (light.type == LightType.Directional || light.GetComponent<HorrorLightSource>() != null)
+                if (!NeedsSource(light))
                     continue;
                 var source = Undo.AddComponent<HorrorLightSource>(light.gameObject);
                 source.linkedLight = light;
@@ -151,6 +151,9 @@ namespace Nekuzaky.HorrorAI.Editor
 
 
         #region Private and Protected
+
+        private static bool NeedsSource(Light light) =>
+            light.type != LightType.Directional && light.GetComponent<HorrorLightSource>() == null && light.GetComponentInParent<HorrorEnemy>() == null;
 
         private static GameObject PlayerCandidate()
         {

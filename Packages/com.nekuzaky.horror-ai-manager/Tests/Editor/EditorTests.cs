@@ -80,8 +80,8 @@ namespace Nekuzaky.HorrorAI.Tests
             HorrorAI.EmitNoise(new Vector3(0f, 0f, -3f), 10f);
             Tick(10);
 
-            StringAssert.Contains("heard a noise", HorrorAIWindow.Describe(enemy));
-            StringAssert.Contains("Hearing", HorrorAIWindow.Memory(enemy));
+            StringAssert.Contains("heard a noise", Explain.Describe(enemy));
+            StringAssert.Contains("Hearing", Explain.Memory(enemy));
             StringAssert.Contains("heard a noise", enemy.LastTransition.Explanation);
         }
 
@@ -116,7 +116,7 @@ namespace Nekuzaky.HorrorAI.Tests
                 HorrorAI.EmitNoise(new Vector3(0f, 0f, -3f), 10f);
                 Tick(10);
 
-                var text = HorrorAIWindow.Describe(enemy) + HorrorAIWindow.Memory(enemy) + EnemyInspector.LiveText(enemy) + InspectorKit.Percent(0.5f);
+                var text = Explain.Describe(enemy) + Explain.Memory(enemy) + EnemyInspector.LiveText(enemy) + InspectorKit.Percent(0.5f);
 
                 StringAssert.Contains("%", text);
                 Assert.AreEqual("50%", InspectorKit.Percent(0.5f));
@@ -132,7 +132,7 @@ namespace Nekuzaky.HorrorAI.Tests
         public void Menus_LiveUnderToolsHorrorAI()
         {
             var paths = new List<string>();
-            foreach (var type in typeof(HorrorAIWindow).Assembly.GetTypes())
+            foreach (var type in typeof(DashboardWindow).Assembly.GetTypes())
             {
                 foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
                 {
@@ -141,14 +141,14 @@ namespace Nekuzaky.HorrorAI.Tests
                 }
             }
 
-            Assert.That(paths, Has.Some.StartsWith("Tools/Horror AI/Open Horror AI"));
+            Assert.That(paths, Has.Some.StartsWith("Tools/Horror AI/Dashboard"));
             Assert.That(paths, Has.Member("Tools/Horror AI/Documentation"));
             Assert.That(paths, Has.Member("Tools/Horror AI/GitHub Repository"));
             Assert.That(paths, Has.None.StartsWith("Window/"));
             Assert.That(paths, Has.None.Contains("%&h"));
             Assert.That(paths, Has.Member("GameObject/Horror AI/Enemy"));
-            Assert.IsTrue(EditorApplication.ExecuteMenuItem("Tools/Horror AI/Open Horror AI"));
-            var window = EditorWindow.GetWindow<HorrorAIWindow>();
+            Assert.IsTrue(EditorApplication.ExecuteMenuItem("Tools/Horror AI/Dashboard"));
+            var window = EditorWindow.GetWindow<DashboardWindow>();
             Assert.IsNotNull(window);
             window.Close();
         }
