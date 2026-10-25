@@ -5,6 +5,7 @@
     Checks that:
     - the build succeeds (a development player: release players have no profiler counters to measure garbage);
     - the player holds the runtime assembly only: no editor, test, development or integration assembly;
+    - the runtime assembly of the player contains no call to the editor dashboard (they are compiled out);
     - the player runs the demo for a few seconds (batch mode, no graphics) without any exception;
     - a probe compiled only into this build (Assets/Dev/BuildProbe, HORROR_AI_BUILD_PROBE) makes a noise next to the
       enemy, and the enemy reacts: at least one state change is logged;
@@ -38,6 +39,40 @@ foreach ($assembly in $ours) { Write-Host ("  in the player: {0} ({1:N1} KB)" -f
 if (-not ($ours | Where-Object { $_.Name -eq 'Nekuzaky.HorrorAI.dll' })) { $problems.Add('The runtime assembly is missing from the player.') }
 if ($ours | Where-Object { $_.Name -like '*.Editor.dll' -or $_.Name -like '*Tests*' -or $_.Name -like '*Dev*' }) { $problems.Add('An editor, test or development assembly is in the player.') }
 if ($ours | Where-Object { $_.Name -like '*Resonance*' -or $_.Name -like '*Hindsight*' }) { $problems.Add('An integration assembly is in the player although its package is not installed.') }
+
+function Get-ProbeCalls([string] $assemblyPath) {
+    $folder = Split-Path $assemblyPath
+    $resolve = [ResolveEventHandler]{
+        param($sender, $request)
+        $file = Join-Path $folder ((New-Object Reflection.AssemblyName($request.Name)).Name + '.dll')
+        if (Test-Path $file) { return [Reflection.Assembly]::ReflectionOnlyLoadFrom($file) }
+        return $null
+    }
+    [AppDomain]::CurrentDomain.add_ReflectionOnlyAssemblyResolve($resolve)
+    $runtime = [Reflection.Assembly]::ReflectionOnlyLoadFrom($assemblyPath)
+    $flags = [Reflection.BindingFlags]'Instance,Static,Public,NonPublic,DeclaredOnly'
+    $calls = 0
+    foreach ($type in $runtime.GetTypes() | Where-Object { $_.Name -ne 'HorrorProbe' }) {
+        foreach ($method in $type.GetMethods($flags) + $type.GetConstructors($flags)) {
+            $body = $method.GetMethodBody()
+            if (-not $body) { continue }
+            $il = $body.GetILAsByteArray()
+            for ($i = 0; $i -lt $il.Length - 4; $i++) {
+                if ($il[$i] -ne 0x28) { continue }
+                try { $target = $type.Module.ResolveMethod([BitConverter]::ToInt32($il, $i + 1)) } catch { continue }
+                if ($target.DeclaringType.Name -eq 'HorrorProbe') { $calls++ }
+            }
+        }
+    }
+    $calls
+}
+
+$runtimePath = Join-Path $managed 'Nekuzaky.HorrorAI.dll'
+if (Test-Path $runtimePath) {
+    $probeCalls = Get-ProbeCalls $runtimePath
+    Write-Host "  calls to the editor dashboard in the player's runtime assembly: $probeCalls"
+    if ($probeCalls -ne 0) { $problems.Add("The player's runtime assembly still calls the dashboard $probeCalls time(s).") }
+}
 
 Write-Host 'Running the player (batch mode, no graphics)...'
 $playerLog = Join-Path (Get-OutputDirectory 'logs') 'build-check-player.log'
