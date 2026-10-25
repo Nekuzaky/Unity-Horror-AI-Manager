@@ -1,0 +1,41 @@
+{
+    "name": "Nekuzaky.HorrorAI.Integrations.Tests",
+    "rootNamespace": "Nekuzaky.HorrorAI.Tests",
+    "references": [
+        "Nekuzaky.HorrorAI",
+        "Nekuzaky.HorrorAI.Resonance",
+        "Nekuzaky.HorrorAI.Hindsight",
+        "Nekuzaky.Resonance",
+        "Nekuzaky.Hindsight",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "HORROR_AI_RESONANCE",
+        "HORROR_AI_HINDSIGHT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.nekuzaky.resonance",
+            "expression": "0.5.1",
+            "define": "HORROR_AI_RESONANCE"
+        },
+        {
+            "name": "com.nekuzaky.hindsight",
+            "expression": "1.0.0",
+            "define": "HORROR_AI_HINDSIGHT"
+        }
+    ],
+    "noEngineReferences": false
+}

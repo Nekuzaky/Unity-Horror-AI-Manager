@@ -1,0 +1,25 @@
+{
+    "name": "Nekuzaky.HorrorAI.Resonance",
+    "rootNamespace": "Nekuzaky.HorrorAI.Integrations",
+    "references": [
+        "Nekuzaky.HorrorAI",
+        "Nekuzaky.Resonance"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "HORROR_AI_RESONANCE"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.nekuzaky.resonance",
+            "expression": "0.5.1",
+            "define": "HORROR_AI_RESONANCE"
+        }
+    ],
+    "noEngineReferences": false
+}

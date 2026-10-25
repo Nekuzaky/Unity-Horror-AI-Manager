@@ -1,0 +1,25 @@
+{
+    "name": "Nekuzaky.HorrorAI.Hindsight",
+    "rootNamespace": "Nekuzaky.HorrorAI.Integrations",
+    "references": [
+        "Nekuzaky.HorrorAI",
+        "Nekuzaky.Hindsight"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "HORROR_AI_HINDSIGHT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.nekuzaky.hindsight",
+            "expression": "1.0.0",
+            "define": "HORROR_AI_HINDSIGHT"
+        }
+    ],
+    "noEngineReferences": false
+}
