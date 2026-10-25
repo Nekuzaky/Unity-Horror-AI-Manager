@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e68136cf92d84e40907d26282157c90, type: 3}
+  m_Name: Patroller Behavior
+  m_EditorClassIdentifier: Nekuzaky.HorrorAI::Nekuzaky.HorrorAI.BehaviorProfile
+  alertThreshold: 0.3
+  calmThreshold: 0.1
+  alertDuration: 1.2
+  investigateTimeout: 15
+  searchDuration: 18
+  searchPointWait: 1.5
+  loseSightGrace: 1.5
+  lostTrackTimeout: 8
+  patrolSpeed: 1.4
+  investigateSpeed: 2.2
+  searchSpeed: 1.8
+  chaseSpeed: 4.2
+  turnSpeed: 240
+  searchRadius: 7
+  arriveDistance: 0.6
+  catchDistance: 1.3
+  catchCooldown: 2
