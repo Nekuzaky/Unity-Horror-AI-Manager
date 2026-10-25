@@ -13,6 +13,8 @@ namespace Nekuzaky.HorrorAI
 
         bool IsMoving { get; }
 
+        bool Reachable { get; }
+
         void MoveTo(Vector3 destination, float speed);
 
         void Stop();
@@ -44,6 +46,35 @@ namespace Nekuzaky.HorrorAI
 
         public bool IsMoving => _moving;
 
+        public bool Reachable
+        {
+            get
+            {
+                if (!_reachable || !_agent.isActiveAndEnabled || !_agent.isOnNavMesh)
+                    return false;
+                if (!_moving || _agent.pathPending)
+                    return true;
+                return _agent.pathStatus == NavMeshPathStatus.PathComplete;
+            }
+        }
+
+        public const float ProjectRadius = 2f;
+        public const float NearestRadius = 10f;
+
+        internal static bool Project(Vector3 point, int areaMask, out Vector3 projected, out bool exact)
+        {
+            if (NavMesh.SamplePosition(point, out var hit, ProjectRadius, areaMask))
+            {
+                projected = hit.position;
+                exact = true;
+                return true;
+            }
+            exact = false;
+            var found = NavMesh.SamplePosition(point, out hit, NearestRadius, areaMask);
+            projected = found ? hit.position : point;
+            return found;
+        }
+
         public void MoveTo(Vector3 destination, float speed)
         {
             if (!_agent.isActiveAndEnabled || !_agent.isOnNavMesh)
@@ -52,10 +83,19 @@ namespace Nekuzaky.HorrorAI
                 _agent.speed = speed;
             if (_agent.isStopped)
                 _agent.isStopped = false;
-            if (_moving && (destination - _destination).sqrMagnitude < RepathDistance * RepathDistance)
+            if (_moving && (destination - _requested).sqrMagnitude < RepathDistance * RepathDistance)
                 return;
-            _destination = destination;
-            _moving = _agent.SetDestination(destination);
+            _requested = destination;
+            if (!Project(destination, _agent.areaMask, out var projected, out var exact))
+            {
+                _destination = destination;
+                _reachable = false;
+                _moving = false;
+                return;
+            }
+            _destination = projected;
+            _moving = _agent.SetDestination(projected);
+            _reachable = exact && _moving;
         }
 
         public void Stop()
@@ -116,8 +156,10 @@ namespace Nekuzaky.HorrorAI
         private const float RepathDistance = 0.35f;
         private readonly NavMeshAgent _agent;
         private readonly Transform _transform;
+        private Vector3 _requested;
         private Vector3 _destination;
         private bool _moving;
+        private bool _reachable = true;
 
         #endregion
     }
@@ -139,6 +181,8 @@ namespace Nekuzaky.HorrorAI
         public Vector3 Destination => _destination;
 
         public bool IsMoving => _moving;
+
+        public bool Reachable => true;
 
         public void MoveTo(Vector3 destination, float speed)
         {

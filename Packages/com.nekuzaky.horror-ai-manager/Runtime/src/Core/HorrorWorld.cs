@@ -51,6 +51,9 @@ namespace Nekuzaky.HorrorAI
                 return;
             _pendingRemovals.Remove(enemy);
             enemy.EnsureInitialized();
+            Precompiler.Run();
+            HorrorBrain.WarmUp(enemy.BehaviorProfile);
+            WarmUpQueries();
             var interval = enemy.PerceptionProfile.updateInterval;
             var spread = (Enemies.Count * 0.618034f) % 1f;
             enemy.Attach(this, _now + interval * spread, _noiseSequence);
@@ -76,8 +79,10 @@ namespace Nekuzaky.HorrorAI
 
         public void Add(HorrorTarget target)
         {
-            if (target != null && !Targets.Contains(target))
-                Targets.Add(target);
+            if (target == null || Targets.Contains(target))
+                return;
+            target.RefreshColliders();
+            Targets.Add(target);
         }
 
         public void Remove(HorrorTarget target) => Targets.Remove(target);
@@ -112,7 +117,7 @@ namespace Nekuzaky.HorrorAI
         public void Tick(float deltaTime)
         {
             var started = Stopwatch.GetTimestamp();
-            var allocated = System.GC.GetAllocatedBytesForCurrentThread();
+            GcCounter.Mark(out var allocatedBefore, out var allocationsBefore);
             _ticking = true;
             _now += Mathf.Max(0f, deltaTime);
             _raysLeft = _budget;
@@ -130,7 +135,7 @@ namespace Nekuzaky.HorrorAI
             FlushRemovals();
             var elapsed = (Stopwatch.GetTimestamp() - started) * 1000d / Stopwatch.Frequency;
             _stats = new HorrorAIStats(Enemies.Count, Targets.Count, Lights.Count, _perceptions, _rays, _deferred, (float)elapsed,
-                System.GC.GetAllocatedBytesForCurrentThread() - allocated, _stats.Frame + 1);
+                GcCounter.Since(allocatedBefore, allocationsBefore), _stats.Frame + 1);
         }
 
         #endregion
@@ -161,6 +166,7 @@ namespace Nekuzaky.HorrorAI
             if (_cursor >= count)
                 _cursor = 0;
             var start = _cursor;
+            var firstDeferred = -1;
             for (var k = 0; k < count; k++)
             {
                 var index = (start + k) % count;
@@ -170,12 +176,16 @@ namespace Nekuzaky.HorrorAI
                 if (enemy.EstimateRays(this) > _raysLeft)
                 {
                     _deferred++;
+                    if (firstDeferred < 0)
+                        firstDeferred = index;
                     continue;
                 }
                 enemy.Perceive(this, _now);
                 _perceptions++;
                 _cursor = (index + 1) % count;
             }
+            if (firstDeferred >= 0)
+                _cursor = firstDeferred;
         }
 
         private void FlushRemovals()

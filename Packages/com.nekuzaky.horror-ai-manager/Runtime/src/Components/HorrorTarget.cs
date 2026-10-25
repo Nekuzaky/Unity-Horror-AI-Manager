@@ -43,6 +43,8 @@ namespace Nekuzaky.HorrorAI
             return t.position + t.rotation * local;
         }
 
+        public void RefreshColliders() => Colliders.Refresh(this);
+
         public Vector3 Center
         {
             get
@@ -57,6 +59,7 @@ namespace Nekuzaky.HorrorAI
 
         #region Private and Protected
 
+        internal readonly ColliderSet Colliders = new();
         internal float ExposureValue;
         internal float NextExposureTime;
 
@@ -73,6 +76,8 @@ namespace Nekuzaky.HorrorAI
             if (Application.isPlaying)
                 HorrorAI.World.Remove(this);
         }
+
+        private void OnTransformChildrenChanged() => RefreshColliders();
 
         #endregion
     }

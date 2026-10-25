@@ -6,16 +6,18 @@ namespace Nekuzaky.HorrorAI
     {
         #region Public
 
-        public bool CanSee(Vector3 from, Vector3 to, LayerMask occluders, Transform target)
+        public const float SourceRadius = 0.25f;
+
+        public bool CanSee(Vector3 from, Vector3 to, LayerMask occluders, ColliderSet owner)
         {
             _raysLeft--;
             _rays++;
             if (!Physics.Linecast(from, to, out var hit, occluders, QueryTriggerInteraction.Ignore))
                 return true;
-            return target != null && hit.transform.IsChildOf(target);
+            return owner != null && owner.Contains(hit.colliderEntityId);
         }
 
-        public int CountWalls(Vector3 from, Vector3 to, LayerMask occluders, Transform listener, Transform source)
+        public int CountWalls(Vector3 from, Vector3 to, LayerMask occluders, ColliderSet listener, ColliderSet source, bool hasSource)
         {
             _raysLeft--;
             _rays++;
@@ -27,10 +29,12 @@ namespace Nekuzaky.HorrorAI
             var walls = 0;
             for (var i = 0; i < count && i < _hits.Length; i++)
             {
-                var hit = _hits[i].transform;
-                if (listener != null && hit.IsChildOf(listener))
+                var id = _hits[i].colliderEntityId;
+                if (listener != null && listener.Contains(id))
                     continue;
-                if (source != null && hit.IsChildOf(source))
+                if (source != null && source.Contains(id))
+                    continue;
+                if (hasSource && _hits[i].distance < SourceRadius)
                     continue;
                 walls++;
             }
@@ -61,7 +65,7 @@ namespace Nekuzaky.HorrorAI
                 if (contribution <= 0.005f || rays >= MaxLightRaysPerTarget)
                     continue;
                 rays++;
-                if (CanSee(light.Position, point, occluders, target.transform))
+                if (CanSee(light.RayOrigin(point), point, occluders, target.Colliders))
                     sum += contribution;
             }
             return Mathf.Max(LightMath.Exposure(_ambient, sum), revealed);
@@ -73,6 +77,19 @@ namespace Nekuzaky.HorrorAI
         #region Private and Protected
 
         private readonly RaycastHit[] _hits = new RaycastHit[8];
+        private static bool _queriesWarmedUp;
+
+        private void WarmUpQueries()
+        {
+            if (_queriesWarmedUp)
+                return;
+            _queriesWarmedUp = true;
+            var from = new Vector3(0f, -100000f, 0f);
+            Physics.Linecast(from, from + Vector3.down, out _, 0, QueryTriggerInteraction.Ignore);
+            Physics.RaycastNonAlloc(new Ray(from, Vector3.down), _hits, 1f, 0, QueryTriggerInteraction.Ignore);
+            UnityEngine.AI.NavMesh.SamplePosition(from, out _, 0.01f, 0);
+            Quaternion.RotateTowards(Quaternion.identity, Quaternion.LookRotation(Vector3.right), 1f);
+        }
 
         private void UpdateExposures()
         {

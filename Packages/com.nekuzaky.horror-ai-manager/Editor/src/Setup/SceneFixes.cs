@@ -45,7 +45,7 @@ namespace Nekuzaky.HorrorAI.Editor
                 source.linkedLight = light;
                 source.range = light.range;
                 source.spotAngle = light.spotAngle;
-                source.shape = light.type == LightType.Spot ? HorrorLightShape.Spot : HorrorLightShape.Point;
+                source.shape = HorrorLightSource.ShapeOf(light.type);
             }
         }
 

@@ -206,7 +206,7 @@ namespace Nekuzaky.HorrorAI.Tests
         }
 
         [Test]
-        public void Budget_RaycastsPerFrameNeverExceedTheBudget()
+        public void Budget_RaycastsPerFrameNeverExceedTheBudgetAndEveryEnemyGetsItsTurn()
         {
             var archetype = Archetype(out var perception, out _);
             perception.updateInterval = 0.02f;
@@ -216,19 +216,52 @@ namespace Nekuzaky.HorrorAI.Tests
             Lamp(new Vector3(5f, 2f, 9f), 8f);
             World.RaycastBudget = 30;
 
-            var perceived = new bool[60];
-            for (var frame = 0; frame < 120; frame++)
+            var last = new int[60];
+            var worst = 0;
+            for (var frame = 1; frame <= 240; frame++)
             {
                 if (frame % 5 == 0)
                     HorrorAI.EmitNoise(new Vector3(5f, 0f, 2f), 8f);
                 Tick(1);
                 Assert.LessOrEqual(World.Stats.Raycasts, 30);
                 for (var e = 0; e < 60; e++)
-                    perceived[e] |= World.Enemies[e].Perception.LastUpdate > 0f;
+                {
+                    if (World.Enemies[e].Perception.LastUpdate != World.Now)
+                        continue;
+                    worst = Mathf.Max(worst, frame - last[e]);
+                    last[e] = frame;
+                }
             }
 
+            var perFrame = (30 - HorrorWorld.MaxLightRaysPerTarget) / (HorrorWorld.MaxPointsPerTarget + HorrorWorld.MaxNoisesPerPerception);
+            var fairGap = Mathf.CeilToInt(60f / perFrame) + 1;
+            Debug.Log($"[HorrorAI] 60 enemies, budget 30: the longest wait between two perceptions of one enemy was {worst} frames (fair bound {fairGap})");
             Assert.Greater(World.Stats.Deferred, 0);
-            Assert.That(perceived, Has.All.True);
+            Assert.That(last, Has.All.GreaterThan(240 - fairGap));
+            Assert.LessOrEqual(worst, fairGap);
+        }
+
+        [Test]
+        public void Light_ADirectionalLightLightsEveryTargetUnderTheSky()
+        {
+            var target = Target(new Vector3(40f, 0f, 0f));
+            var sun = Track(new GameObject("Sun"));
+            sun.transform.rotation = Quaternion.Euler(50f, 30f, 0f);
+            var light = sun.AddComponent<Light>();
+            light.type = LightType.Directional;
+            var source = sun.AddComponent<HorrorLightSource>();
+            source.linkedLight = light;
+            source.intensity = 0.5f;
+            World.Add(source);
+            Physics.SyncTransforms();
+
+            var open = World.ComputeExposure(target, ~0);
+            Wall(new Vector3(40f, 3f, 0f), new Vector3(30f, 0.3f, 30f));
+            var covered = World.ComputeExposure(target, ~0);
+
+            Assert.IsTrue(source.IsDirectional);
+            Assert.AreEqual(World.AmbientLight + 0.5f, open, 0.01f);
+            Assert.AreEqual(World.AmbientLight, covered, 0.01f);
         }
 
         [Test]

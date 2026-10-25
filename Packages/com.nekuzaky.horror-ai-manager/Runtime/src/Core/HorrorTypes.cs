@@ -27,7 +27,9 @@ namespace Nekuzaky.HorrorAI
         LostSight,
         LostTrackOver,
         GaveUp,
-        Scripted
+        Scripted,
+        CouldNotReach,
+        Disabled
     }
 
     public enum MemorySource
@@ -72,6 +74,8 @@ namespace Nekuzaky.HorrorAI
                 case TransitionReason.LostTrackOver: return "lost the trail";
                 case TransitionReason.GaveUp: return "gave up the search";
                 case TransitionReason.Scripted: return "told to by a script";
+                case TransitionReason.CouldNotReach: return "could not reach the last known position";
+                case TransitionReason.Disabled: return "was disabled";
                 default: return "nothing yet";
             }
         }

@@ -85,16 +85,18 @@ namespace Nekuzaky.HorrorAI.Editor
             return foldout;
         }
 
-        private static string LiveText(HorrorEnemy enemy)
+        internal static string LiveText(HorrorEnemy enemy)
         {
             if (enemy == null || !enemy.IsActive)
                 return "Not running";
             var perception = enemy.Perception;
             var memory = enemy.Memory;
-            return $"{enemy.State} for {enemy.StateTime:0.0} s ({enemy.LastTransition.Explanation})\n" +
-                   $"Suspicion {enemy.Suspicion:P0}   Sees {(perception.Sees ? perception.VisibleFraction.ToString("P0") : "nothing")}   " +
-                   $"Target lit {perception.Exposure:P0}\n" +
-                   $"Memory {(memory.HasMemory ? $"{memory.Source}, {memory.Certainty:P0} sure, {HorrorAI.Time - memory.Time:0.0} s ago" : "empty")}";
+            return enemy.State + " for " + InspectorKit.Seconds(enemy.StateTime) + " (" + enemy.LastTransition.Explanation + ")\n" +
+                   "Suspicion " + InspectorKit.Percent(enemy.Suspicion) + "   Sees " + (perception.Sees ? InspectorKit.Percent(perception.VisibleFraction) : "nothing") +
+                   "   Target lit " + InspectorKit.Percent(perception.Exposure) + "\n" +
+                   "Memory " + (memory.HasMemory
+                       ? memory.Source + ", " + InspectorKit.Percent(memory.Certainty) + " sure, " + InspectorKit.Seconds(HorrorAI.Time - memory.Time) + " ago"
+                       : "empty");
         }
 
         #endregion

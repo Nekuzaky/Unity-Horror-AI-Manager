@@ -15,12 +15,12 @@ namespace Nekuzaky.HorrorAI.Tests
         private float _now;
         private readonly List<HorrorTransition> _transitions = new();
 
-        private void Create(PatrolRoute route = null, uint seed = 7u)
+        private void Create(PatrolRoute route = null, uint seed = 7u, IHorrorMover mover = null)
         {
             _body = Track(new GameObject("Body")).transform;
             _profile = Asset<BehaviorProfile>();
             _mind = new HorrorMind();
-            _brain = new HorrorBrain(new TransformMover(_body), _profile, route, seed);
+            _brain = new HorrorBrain(mover ?? new TransformMover(_body), _profile, route, seed);
             _brain.Begin(0f);
             _now = 0f;
             _transitions.Clear();
@@ -93,6 +93,37 @@ namespace Nekuzaky.HorrorAI.Tests
             Assert.Less(Vector3.Distance(_body.position, new Vector3(3f, 0f, 3f)), _profile.arriveDistance);
             Assert.AreEqual(HorrorState.Patrol, _brain.State);
             Assert.IsEmpty(_transitions);
+        }
+
+        [Test]
+        public void Patrol_OneWaypointKeepsWatchingForNewOnes()
+        {
+            var route = Route(0.5f, new Vector3(0f, 0f, 2f));
+            Create(route);
+            Run(3f);
+            Assert.AreEqual(0, _brain.PatrolIndex);
+            Assert.Less(Vector3.Distance(_body.position, new Vector3(0f, 0f, 2f)), _profile.arriveDistance);
+
+            Track(route.AddWaypoint(new Vector3(3f, 0f, 2f), 0.5f).gameObject);
+            Run(1.5f);
+
+            Assert.AreEqual(1, _brain.PatrolIndex);
+            Assert.IsEmpty(_transitions);
+        }
+
+        [Test]
+        public void Patrol_WaypointsAddedAtTheEndOfAOnceRouteAreFollowed()
+        {
+            var route = Route(0.2f, Vector3.zero, new Vector3(0f, 0f, 2f));
+            route.mode = PatrolMode.Once;
+            Create(route);
+            Run(4f);
+            Assert.AreEqual(1, _brain.PatrolIndex);
+
+            Track(route.AddWaypoint(new Vector3(2f, 0f, 2f), 0.2f).gameObject);
+            Run(2.5f);
+
+            Assert.AreEqual(2, _brain.PatrolIndex);
         }
 
         [Test]
@@ -203,6 +234,79 @@ namespace Nekuzaky.HorrorAI.Tests
 
             Assert.AreEqual(HorrorState.Search, _brain.State);
             Assert.AreEqual(TransitionReason.InvestigationTimedOut, Last.Reason);
+        }
+
+        [Test]
+        public void Investigate_AnUnreachableSpotIsSearchedFromTheNearestReachablePoint()
+        {
+            var mover = new BlockedMover(new Vector3(2f, 0f, 0f));
+            Create(null, 7u, mover);
+            Remember(new Vector3(10f, 0f, 10f), MemorySource.Hearing, 0.5f);
+            Force(HorrorState.Investigate);
+
+            Run(0.5f);
+
+            Assert.AreEqual(HorrorState.Search, _brain.State);
+            Assert.AreEqual(TransitionReason.CouldNotReach, Last.Reason);
+            StringAssert.StartsWith("could not reach", Last.Explanation);
+            Assert.Less(Vector3.Distance(_brain.SearchCenter, new Vector3(2f, 0f, 0f)), 0.01f);
+        }
+
+        [Test]
+        public void LostTrack_AnUnreachableSpotIsSearchedFromTheNearestReachablePoint()
+        {
+            var mover = new BlockedMover(new Vector3(-3f, 0f, 1f));
+            Create(null, 7u, mover);
+            See(new Vector3(0f, 0f, 2f));
+            Force(HorrorState.Chase);
+            Blind();
+            _mind.Memory.Remember(new Vector3(20f, 0f, 20f), _now + 0.01f, 1f, MemorySource.Sight);
+
+            Run(_profile.loseSightGrace + 0.5f);
+
+            Assert.AreEqual(HorrorState.Search, _brain.State);
+            Assert.AreEqual(TransitionReason.CouldNotReach, Last.Reason);
+            Assert.Less(Vector3.Distance(_brain.SearchCenter, new Vector3(-3f, 0f, 1f)), 0.01f);
+        }
+
+        private sealed class BlockedMover : IHorrorMover
+        {
+            public BlockedMover(Vector3 nearest)
+            {
+                Position = nearest;
+            }
+
+            public Vector3 Position { get; }
+
+            public Vector3 Forward => Vector3.forward;
+
+            public Vector3 Destination { get; private set; }
+
+            public bool IsMoving => false;
+
+            public bool Reachable => false;
+
+            public void MoveTo(Vector3 destination, float speed) => Destination = destination;
+
+            public void Stop()
+            {
+            }
+
+            public bool HasArrived(float tolerance) => true;
+
+            public bool TryProject(Vector3 point, float maxDistance, out Vector3 projected)
+            {
+                projected = point;
+                return true;
+            }
+
+            public void Turn(Vector3 lookAt, float degreesPerSecond, float deltaTime)
+            {
+            }
+
+            public void Tick(float deltaTime)
+            {
+            }
         }
 
         #endregion

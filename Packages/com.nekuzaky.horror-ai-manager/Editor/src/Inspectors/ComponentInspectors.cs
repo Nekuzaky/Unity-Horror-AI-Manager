@@ -21,7 +21,8 @@ namespace Nekuzaky.HorrorAI.Editor
             root.Add(InspectorKit.Field(serializedObject, "samplePoints", "Body Points"));
             root.Add(InspectorKit.Field(serializedObject, "occluders", "Light Blockers"));
             root.Add(InspectorKit.Live(() => horrorTarget == null ? string.Empty :
-                $"Lit {horrorTarget.Exposure:P0}   Visibility {horrorTarget.Visibility:P0}{(horrorTarget.Crouching ? "   (crouching)" : string.Empty)}"));
+                "Lit " + InspectorKit.Percent(horrorTarget.Exposure) + "   Visibility " + InspectorKit.Percent(horrorTarget.Visibility) +
+                (horrorTarget.Crouching ? "   (crouching)" : string.Empty)));
             InspectorKit.Watch(root, serializedObject, () =>
             {
                 warnings.Begin();
@@ -50,7 +51,7 @@ namespace Nekuzaky.HorrorAI.Editor
             var root = InspectorKit.Root("Tells the AI that this light reveals what it shines on. Targets in its range and beam are spotted faster.");
             var warnings = new Warnings();
             root.Add(warnings);
-            root.Add(InspectorKit.Field(serializedObject, "linkedLight", "Unity Light"));
+            root.Add(InspectorKit.Field(serializedObject, "linkedLight", "Light"));
             root.Add(InspectorKit.Field(serializedObject, "followLight", "Follow Its Settings"));
             var manual = new VisualElement();
             manual.Add(InspectorKit.Field(serializedObject, "shape", "Shape"));
@@ -75,8 +76,9 @@ namespace Nekuzaky.HorrorAI.Editor
                             Undo.RecordObject(source, "Link Light");
                             source.linkedLight = light;
                         });
-                if (source.linkedLight != null && source.linkedLight.type == LightType.Directional)
-                    warnings.Add(HelpBoxMessageType.Warning, "Directional lights are not supported: raise Ambient Light from a script with HorrorAI.AmbientLight instead.");
+                if (source.IsDirectional)
+                    warnings.Add(HelpBoxMessageType.Info, "A directional light (sun, moon) lights every target that has open sky in its direction, wherever it stands. " +
+                                                          "Keep Reveal Strength low for moonlight (0.1 to 0.3).");
                 if (source.revealsHolder && source.Holder == null)
                     warnings.Add(HelpBoxMessageType.Warning, "Reveals Its Holder is on, but no parent has a Horror Target. Put this light under the player.");
                 warnings.Render();
@@ -92,7 +94,7 @@ namespace Nekuzaky.HorrorAI.Editor
         public override VisualElement CreateInspectorGUI()
         {
             var emitter = (NoiseEmitter)target;
-            var root = InspectorKit.Root("Makes a noise enemies can hear: when this object hits something, enters a trigger, or when a Unity Event or an animation event calls Emit.");
+            var root = InspectorKit.Root("Makes a noise enemies can hear: when this object hits something, enters a trigger, or when an inspector event or an animation event calls Emit.");
             var warnings = new Warnings();
             root.Add(warnings);
             root.Add(InspectorKit.Field(serializedObject, "loudness", "Loudness (m)"));
@@ -127,7 +129,7 @@ namespace Nekuzaky.HorrorAI.Editor
                 warnings.Add(HelpBoxMessageType.Info, "Collisions need a Rigidbody on this object or on what hits it. Props that fall or get kicked need one here.",
                     "Add a Rigidbody", () => Undo.AddComponent<Rigidbody>(go));
             if (emitter.emitOn == NoiseTrigger.None)
-                warnings.Add(HelpBoxMessageType.Info, "Make Noise When is empty: call Emit() from a Unity Event, an animation event or a script.");
+                warnings.Add(HelpBoxMessageType.Info, "Make Noise When is empty: call Emit() from an event in the inspector, an animation event or a script.");
             warnings.Render();
         }
     }

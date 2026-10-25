@@ -66,7 +66,20 @@ namespace Nekuzaky.HorrorAI
 
         public BehaviorProfile BehaviorProfile => Archetype.Behavior;
 
-        public Vector3 EyePosition => eye != null ? eye.position : transform.position + Vector3.up * PerceptionProfile.eyeHeight;
+        public Vector3 EyePosition => eye != null ? eye.position : FeetPosition + Vector3.up * PerceptionProfile.eyeHeight;
+
+        public Vector3 FeetPosition
+        {
+            get
+            {
+                if (!_agentResolved || (_agent == null && !Application.isPlaying))
+                    ResolveAgent();
+                var position = transform.position;
+                if (_agent != null)
+                    position.y -= _agent.baseOffset * transform.lossyScale.y;
+                return position;
+            }
+        }
 
         public Vector3 EyeForward => eye != null ? eye.forward : transform.forward;
 
@@ -112,6 +125,9 @@ namespace Nekuzaky.HorrorAI
         #region Private and Protected
 
         private readonly HorrorMind _mind = new();
+        private readonly ColliderSet _colliders = new();
+        private NavMeshAgent _agent;
+        private bool _agentResolved;
         private HorrorBrain _brain;
         private HorrorWorld _world;
         private float _nextPerception;
@@ -126,14 +142,17 @@ namespace Nekuzaky.HorrorAI
         {
             if (_brain != null)
                 return;
-            var agent = GetComponent<NavMeshAgent>();
-            IHorrorMover mover = agent != null ? new NavMeshMover(agent) : new TransformMover(transform);
+            ResolveAgent();
+            IHorrorMover mover = _agent != null ? new NavMeshMover(_agent) : new TransformMover(transform);
             _brain = new HorrorBrain(mover, BehaviorProfile, patrolRoute, (uint)seed);
             _brain.Begin(HorrorAI.World.Now);
         }
 
         internal void Attach(HorrorWorld world, float nextPerception, int noiseCursor)
         {
+            _mind.Clear();
+            _colliders.Refresh(this);
+            PrimeEvents();
             _world = world;
             _nextPerception = nextPerception;
             _lastPerception = world.Now;
@@ -144,8 +163,35 @@ namespace Nekuzaky.HorrorAI
 
         internal void Detach()
         {
+            var now = _world != null ? _world.Now : HorrorAI.World.Now;
             _world = null;
+            if (_brain != null && _brain.State != HorrorState.Patrol)
+            {
+                _brain.Force(_mind, HorrorState.Patrol, TransitionReason.Disabled, now);
+                Raise(_brain.LastTransition);
+            }
+            _brain?.Mover.Stop();
             HorrorAI.RaiseEnemyRemoved(this);
+        }
+
+        internal void PrimeEvents()
+        {
+            EventPrimer.Prime(onStateChanged);
+            EventPrimer.Prime(onAlerted);
+            EventPrimer.Prime(onInvestigate);
+            EventPrimer.Prime(onSpotted);
+            EventPrimer.Prime(onChaseStarted);
+            EventPrimer.Prime(onLostTrack);
+            EventPrimer.Prime(onSearchStarted);
+            EventPrimer.Prime(onGaveUp);
+            EventPrimer.Prime(onCaught);
+            EventPrimer.Prime(onNoiseHeard);
+        }
+
+                private void ResolveAgent()
+        {
+            TryGetComponent(out _agent);
+            _agentResolved = true;
         }
 
         internal bool PerceptionDue(float now) => now >= _nextPerception;
@@ -194,6 +240,8 @@ namespace Nekuzaky.HorrorAI
         }
 
         private void Awake() => EnsureInitialized();
+
+        private void OnTransformChildrenChanged() => _colliders.Refresh(this);
 
         private void OnEnable()
         {

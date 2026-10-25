@@ -5,7 +5,8 @@ namespace Nekuzaky.HorrorAI
     public enum HorrorLightShape
     {
         Point,
-        Spot
+        Spot,
+        Directional
     }
 
     [AddComponentMenu("Horror AI/Horror Light Source")]
@@ -15,7 +16,7 @@ namespace Nekuzaky.HorrorAI
     {
         #region Public
 
-        [Tooltip("The Unity Light this source follows. Its range, spot angle, shape and on/off state are read from it.")]
+        [Tooltip("The Light this source follows. Its type, range, spot angle and on/off state are read from it.")]
         public Light linkedLight;
         [Tooltip("Read range, spot angle, shape and on/off from the linked Light. Turn off to set them by hand.")]
         public bool followLight = true;
@@ -45,6 +46,12 @@ namespace Nekuzaky.HorrorAI
 
         public bool IsSpot => followLight && linkedLight != null ? linkedLight.type == LightType.Spot : shape == HorrorLightShape.Spot;
 
+        public Vector3 Direction => transform.forward;
+
+        public bool IsDirectional => followLight && linkedLight != null ? linkedLight.type == LightType.Directional : shape == HorrorLightShape.Directional;
+
+        public const float DirectionalReach = 200f;
+
         public float Intensity => intensity;
 
         public Vector3 Position => transform.position;
@@ -71,8 +78,21 @@ namespace Nekuzaky.HorrorAI
 
         public void Toggle() => SetOn(!On);
 
-        public float ContributionAt(Vector3 point) =>
-            LightMath.Contribution(transform.position, transform.forward, IsSpot, SpotAngle, Range, Intensity, point);
+        public static HorrorLightShape ShapeOf(LightType type)
+        {
+            switch (type)
+            {
+                case LightType.Spot: return HorrorLightShape.Spot;
+                case LightType.Directional: return HorrorLightShape.Directional;
+                default: return HorrorLightShape.Point;
+            }
+        }
+
+        public float ContributionAt(Vector3 point) => IsDirectional
+            ? Mathf.Max(0f, Intensity)
+            : LightMath.Contribution(transform.position, transform.forward, IsSpot, SpotAngle, Range, Intensity, point);
+
+        public Vector3 RayOrigin(Vector3 point) => IsDirectional ? point - transform.forward * DirectionalReach : transform.position;
 
         #endregion
 
@@ -90,7 +110,7 @@ namespace Nekuzaky.HorrorAI
                 return;
             range = linkedLight.range;
             spotAngle = linkedLight.spotAngle;
-            shape = linkedLight.type == LightType.Spot ? HorrorLightShape.Spot : HorrorLightShape.Point;
+            shape = ShapeOf(linkedLight.type);
         }
 
         private void OnEnable()

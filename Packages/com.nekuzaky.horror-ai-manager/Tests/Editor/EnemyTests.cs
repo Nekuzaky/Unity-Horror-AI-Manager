@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Nekuzaky.HorrorAI.Tests
 {
@@ -134,6 +135,66 @@ namespace Nekuzaky.HorrorAI.Tests
             Assert.IsFalse(World.Enemies.Contains(enemy));
             Assert.IsTrue(World.Enemies.Contains(other));
             Assert.IsFalse(enemy.IsActive);
+        }
+
+        [Test]
+        public void EyePosition_IsMeasuredFromTheFeetOfANavMeshAgent()
+        {
+            var enemy = Enemy(new Vector3(0f, 1f, 0f), Vector3.forward, Archetype(out var perception, out _), false);
+            var agent = enemy.gameObject.AddComponent<NavMeshAgent>();
+            agent.baseOffset = 1f;
+
+            Assert.AreEqual(perception.eyeHeight, enemy.EyePosition.y, 1e-4f);
+            Assert.AreEqual(0f, enemy.FeetPosition.y, 1e-4f);
+        }
+
+        [Test]
+        public void EyePosition_WithoutAnAgentStartsAtThePivot()
+        {
+            var enemy = Enemy(new Vector3(0f, 0.5f, 0f), Vector3.forward, Archetype(out var perception, out _), false);
+
+            Assert.AreEqual(0.5f + perception.eyeHeight, enemy.EyePosition.y, 1e-4f);
+        }
+
+        [Test]
+        public void DisablingAChasingEnemy_SendsItBackToPatrol()
+        {
+            var enemy = Enemy(Vector3.zero, Vector3.forward, Archetype(out _, out _));
+            Target(new Vector3(0f, 0f, 4f));
+            Lamp(new Vector3(0f, 2.5f, 4.5f), 6f);
+            Assert.Less(SecondsUntil(() => enemy.State == HorrorState.Chase, 5f), 5f);
+            var changes = new List<HorrorTransition>();
+            enemy.StateChanged += (_, transition) => changes.Add(transition);
+
+            World.Remove(enemy);
+
+            Assert.AreEqual(1, changes.Count);
+            Assert.AreEqual(HorrorState.Chase, changes[0].From);
+            Assert.AreEqual(HorrorState.Patrol, changes[0].To);
+            Assert.AreEqual(TransitionReason.Disabled, changes[0].Reason);
+            Assert.AreEqual(HorrorState.Patrol, enemy.State);
+        }
+
+        [Test]
+        public void ReenablingAnEnemy_StartsFromAClearMind()
+        {
+            var enemy = Enemy(Vector3.zero, Vector3.forward, Archetype(out _, out _));
+            var target = Target(new Vector3(0f, 0f, 4f));
+            Lamp(new Vector3(0f, 2.5f, 4.5f), 6f);
+            Assert.Less(SecondsUntil(() => enemy.State == HorrorState.Chase, 5f), 5f);
+            World.Remove(enemy);
+            target.transform.position = new Vector3(0f, 0f, -40f);
+            var changes = new List<HorrorTransition>();
+            enemy.StateChanged += (_, transition) => changes.Add(transition);
+
+            World.Add(enemy);
+            Tick(2);
+
+            Assert.IsEmpty(changes);
+            Assert.AreEqual(HorrorState.Patrol, enemy.State);
+            Assert.AreEqual(0f, enemy.Suspicion);
+            Assert.IsFalse(enemy.Memory.HasMemory);
+            Assert.IsFalse(enemy.Perception.Sees);
         }
 
         private static List<string> Without(List<string> events, string value, int keep)

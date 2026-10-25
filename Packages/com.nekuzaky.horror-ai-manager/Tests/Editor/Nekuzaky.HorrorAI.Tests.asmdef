@@ -4,6 +4,7 @@
     "references": [
         "Nekuzaky.HorrorAI",
         "Nekuzaky.HorrorAI.Editor",
+        "Unity.AI.Navigation",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

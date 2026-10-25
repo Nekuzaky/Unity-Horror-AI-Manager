@@ -21,7 +21,7 @@ namespace Nekuzaky.HorrorAI
 
         [Tooltip("How far the noise carries in open space, in meters, for an enemy with a hearing multiplier of 1.")]
         [Min(0f)] public float loudness = 8f;
-        [Tooltip("When the noise is made. Leave None to only make it from a Unity Event, an animation event or a script.")]
+        [Tooltip("When the noise is made. Leave None to only make it from an event in the inspector, an animation event or a script.")]
         public NoiseTrigger emitOn = NoiseTrigger.CollisionEnter;
         [Tooltip("Softer impacts make no noise.")]
         [Min(0f)] public float minImpactSpeed = 1.5f;

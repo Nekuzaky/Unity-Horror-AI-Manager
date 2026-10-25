@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace Nekuzaky.HorrorAI.Editor
@@ -7,7 +8,11 @@ namespace Nekuzaky.HorrorAI.Editor
     {
         #region Public
 
-        [MenuItem("Window/Horror AI", false, 2000)]
+        public const string MenuRoot = "Tools/Horror AI/";
+        public const string DocumentationUrl = "https://github.com/Nekuzaky/Unity-Horror-AI-Manager/blob/main/Packages/com.nekuzaky.horror-ai-manager/Documentation~/index.md";
+        public const string RepositoryUrl = "https://github.com/Nekuzaky/Unity-Horror-AI-Manager";
+
+        [MenuItem(MenuRoot + "Open Horror AI %#&h", priority = 1)]
         public static void Open()
         {
             var window = GetWindow<HorrorAIWindow>();
@@ -16,19 +21,33 @@ namespace Nekuzaky.HorrorAI.Editor
             window.Show();
         }
 
+        [MenuItem(MenuRoot + "Documentation", priority = 40)]
+        public static void OpenDocumentation() => Application.OpenURL(DocumentationUrl);
+
+        [MenuItem(MenuRoot + "GitHub Repository", priority = 41)]
+        public static void OpenRepository() => Application.OpenURL(RepositoryUrl);
+
         internal static string Describe(HorrorEnemy enemy)
         {
             var perception = enemy.Perception;
-            var sees = perception.Sees ? $"sees {perception.VisibleFraction:P0} of the target, lit {perception.Exposure:P0}" : "sees nothing";
-            var heard = perception.HeardTime > 0f ? $"heard a noise {HorrorAI.Time - perception.HeardTime:0.0} s ago ({perception.HeardLoudness:P0})" : "heard nothing";
-            return $"{sees}; {heard}";
+            var sees = perception.Sees
+                ? "sees " + InspectorKit.Percent(perception.VisibleFraction) + " of the target, lit " + InspectorKit.Percent(perception.Exposure)
+                : "sees nothing";
+            var heard = perception.HeardTime > 0f
+                ? "heard a noise " + InspectorKit.Seconds(HorrorAI.Time - perception.HeardTime) + " ago (" + InspectorKit.Percent(perception.HeardLoudness) + ")"
+                : "heard nothing";
+            return sees + "; " + heard;
         }
 
         internal static string Memory(HorrorEnemy enemy)
         {
             var memory = enemy.Memory;
-            return memory.HasMemory ? $"{memory.Source}, {memory.Certainty:P0} sure, {HorrorAI.Time - memory.Time:0.0} s old" : "empty";
+            return memory.HasMemory
+                ? memory.Source + ", " + InspectorKit.Percent(memory.Certainty) + " sure, " + InspectorKit.Seconds(HorrorAI.Time - memory.Time) + " old"
+                : "empty";
         }
+
+        internal static string Allocated(long bytes) => bytes < 0L ? "allocation not measured" : bytes + " B allocated by the update";
 
         #endregion
 
@@ -38,15 +57,31 @@ namespace Nekuzaky.HorrorAI.Editor
         private Vector2 _scroll;
         private double _nextRepaint;
 
-        private void OnEnable() => EditorApplication.update += Tick;
+        private void OnEnable()
+        {
+            EditorApplication.update += Tick;
+            EditorApplication.hierarchyChanged += Repaint;
+            EditorSceneManager.sceneOpened += OnSceneOpened;
+            EditorSceneManager.activeSceneChangedInEditMode += OnActiveSceneChanged;
+        }
 
-        private void OnDisable() => EditorApplication.update -= Tick;
+        private void OnDisable()
+        {
+            EditorApplication.update -= Tick;
+            EditorApplication.hierarchyChanged -= Repaint;
+            EditorSceneManager.sceneOpened -= OnSceneOpened;
+            EditorSceneManager.activeSceneChangedInEditMode -= OnActiveSceneChanged;
+        }
+
+        private void OnSceneOpened(UnityEngine.SceneManagement.Scene scene, OpenSceneMode mode) => Repaint();
+
+        private void OnActiveSceneChanged(UnityEngine.SceneManagement.Scene from, UnityEngine.SceneManagement.Scene to) => Repaint();
 
         private void Tick()
         {
-            if (!Application.isPlaying || EditorApplication.timeSinceStartup < _nextRepaint)
+            if (EditorApplication.timeSinceStartup < _nextRepaint)
                 return;
-            _nextRepaint = EditorApplication.timeSinceStartup + 0.1d;
+            _nextRepaint = EditorApplication.timeSinceStartup + (Application.isPlaying ? 0.1d : 1d);
             Repaint();
         }
 
@@ -59,8 +94,8 @@ namespace Nekuzaky.HorrorAI.Editor
             }
             var stats = HorrorAI.Stats;
             EditorGUILayout.LabelField($"{stats.Enemies} enemies, {stats.Targets} targets, {stats.Lights} lights   |   " +
-                                       $"{stats.Milliseconds:0.000} ms, {stats.Perceptions} perceptions, {stats.Raycasts}/{HorrorAI.RaycastBudget} rays, " +
-                                       $"{stats.Deferred} deferred, {stats.AllocatedBytes} B allocated this frame", EditorStyles.miniLabel);
+                                       $"{InspectorKit.Milliseconds(stats.Milliseconds)}, {stats.Perceptions} perceptions, {stats.Raycasts}/{HorrorAI.RaycastBudget} rays, " +
+                                       $"{stats.Deferred} deferred, {Allocated(stats.AllocatedBytes)}", EditorStyles.miniLabel);
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
             var enemies = HorrorAI.Enemies;
             for (var i = 0; i < enemies.Count; i++)
@@ -86,10 +121,10 @@ namespace Nekuzaky.HorrorAI.Editor
             }
             GUI.color = color;
             var bar = GUILayoutUtility.GetRect(100f, 16f, GUILayout.ExpandWidth(true));
-            EditorGUI.ProgressBar(bar, enemy.Suspicion, $"Suspicion {enemy.Suspicion:P0}");
+            EditorGUI.ProgressBar(bar, enemy.Suspicion, "Suspicion " + InspectorKit.Percent(enemy.Suspicion));
             EditorGUILayout.EndHorizontal();
             var transition = enemy.LastTransition;
-            EditorGUILayout.LabelField($"Last change: {transition.From} → {transition.To} because it {transition.Explanation}, {HorrorAI.Time - transition.Time:0.0} s ago",
+            EditorGUILayout.LabelField($"Last change: {transition.From} → {transition.To} because it {transition.Explanation}, {InspectorKit.Seconds(HorrorAI.Time - transition.Time)} ago",
                 EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.LabelField("Now: " + Describe(enemy), EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.LabelField("Memory: " + Memory(enemy), EditorStyles.wordWrappedMiniLabel);
@@ -99,7 +134,10 @@ namespace Nekuzaky.HorrorAI.Editor
         private static void DrawEditMode()
         {
             EditorGUILayout.HelpBox("Press Play to watch every enemy live: its state, suspicion, what it sees and hears, and why it last changed its mind.", MessageType.Info);
-            foreach (var enemy in FindObjectsByType<HorrorEnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            var enemies = FindObjectsByType<HorrorEnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID);
+            if (enemies.Length == 0)
+                EditorGUILayout.LabelField("No Horror Enemy in the open scenes. Add one with GameObject > Horror AI > Enemy.", EditorStyles.wordWrappedMiniLabel);
+            foreach (var enemy in enemies)
             {
                 var warnings = new Warnings();
                 EnemyInspector.Collect(enemy, warnings);

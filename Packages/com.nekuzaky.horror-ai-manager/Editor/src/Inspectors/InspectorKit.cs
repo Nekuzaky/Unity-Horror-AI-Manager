@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -116,6 +117,14 @@ namespace Nekuzaky.HorrorAI.Editor
             root.schedule.Execute(validate).Every(1000);
             validate();
         }
+
+        public static string Percent(float value) => Mathf.RoundToInt(value * 100f).ToString(CultureInfo.InvariantCulture) + "%";
+
+        public static string Seconds(float value) => value.ToString("0.0", CultureInfo.InvariantCulture) + " s";
+
+        public static string Milliseconds(float value) => value.ToString("0.000", CultureInfo.InvariantCulture) + " ms";
+
+        public static string Number(float value, string format) => value.ToString(format, CultureInfo.InvariantCulture);
 
         public static Button Button(string text, Action click, string tooltip = null) => new(click) { text = text, tooltip = tooltip };
 

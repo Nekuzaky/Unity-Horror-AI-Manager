@@ -13,11 +13,33 @@ namespace Nekuzaky.HorrorAI
             if (_instance != null)
                 return;
             var host = new GameObject("Horror AI") { hideFlags = HideFlags.HideAndDontSave };
-            DontDestroyOnLoad(host);
+            if (Application.isPlaying)
+                DontDestroyOnLoad(host);
             _instance = host.AddComponent<HorrorRunner>();
         }
 
-        public static void Reset() => _instance = null;
+        public static void DestroyAll()
+        {
+            _instance = null;
+            var runners = Resources.FindObjectsOfTypeAll<HorrorRunner>();
+            for (var i = 0; i < runners.Length; i++)
+            {
+                if (runners[i] != null)
+                    DestroyImmediate(runners[i].gameObject);
+            }
+        }
+
+        internal static HorrorRunner Current => _instance;
+
+        internal void Run(float deltaTime)
+        {
+            if (_instance != this)
+            {
+                Retire();
+                return;
+            }
+            HorrorAI.World.Tick(deltaTime);
+        }
 
         #endregion
 
@@ -26,7 +48,15 @@ namespace Nekuzaky.HorrorAI
 
         private static HorrorRunner _instance;
 
-        private void Update() => HorrorAI.World.Tick(UnityEngine.Time.deltaTime);
+        private void Update() => Run(UnityEngine.Time.deltaTime);
+
+        private void Retire()
+        {
+            if (Application.isPlaying)
+                Destroy(gameObject);
+            else
+                DestroyImmediate(gameObject);
+        }
 
         private void OnDestroy()
         {

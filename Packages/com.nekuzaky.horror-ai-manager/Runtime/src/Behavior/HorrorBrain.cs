@@ -15,6 +15,15 @@ namespace Nekuzaky.HorrorAI
 
         public bool Spotted => Perception.Sees && Suspicion >= 0.999f;
 
+        public void Clear()
+        {
+            Suspicion = 0f;
+            Memory = default;
+            Perception = default;
+            SinceStimulus = float.MaxValue;
+            TargetPosition = default;
+        }
+
         public void Forget()
         {
             Suspicion = 0f;
@@ -31,6 +40,7 @@ namespace Nekuzaky.HorrorAI
         #region Public
 
         public const int TrailLength = 6;
+        public const float RouteRecheck = 0.5f;
 
         public HorrorBrain(IHorrorMover mover, BehaviorProfile profile, PatrolRoute route, uint seed)
         {
@@ -133,7 +143,7 @@ namespace Nekuzaky.HorrorAI
                     _mover.Stop();
                     break;
                 case HorrorState.Search:
-                    BeginSearch(mind);
+                    BeginSearch(mind, reason);
                     break;
                 case HorrorState.Chase:
                     _lastSeen = _now;

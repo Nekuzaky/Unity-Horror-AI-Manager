@@ -91,10 +91,16 @@ namespace Nekuzaky.HorrorAI
         internal static void RaiseEnemyRemoved(HorrorEnemy enemy) => EnemyRemoved?.Invoke(enemy);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics()
+        private static void ResetStatics() => ResetSession();
+
+        internal static void ResetSession()
         {
             _world = new HorrorWorld();
-            HorrorRunner.Reset();
+            NoiseEmitted = null;
+            StateChanged = null;
+            EnemyAdded = null;
+            EnemyRemoved = null;
+            HorrorRunner.DestroyAll();
         }
 
         internal static void EnsureRunner()

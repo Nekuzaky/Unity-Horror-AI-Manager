@@ -43,7 +43,7 @@ namespace Nekuzaky.HorrorAI
             _mover.MoveTo(_goal, Profile.investigateSpeed);
             if (_mover.HasArrived(Profile.arriveDistance))
             {
-                Enter(mind, HorrorState.Search, TransitionReason.ReachedLastKnownPosition);
+                Enter(mind, HorrorState.Search, ArrivalReason());
                 return;
             }
             if (StateTime >= Profile.investigateTimeout)
@@ -106,7 +106,7 @@ namespace Nekuzaky.HorrorAI
             _goal = mind.Memory.Position;
             _mover.MoveTo(_goal, Profile.chaseSpeed);
             if (_mover.HasArrived(Profile.arriveDistance))
-                Enter(mind, HorrorState.Search, TransitionReason.ReachedLastKnownPosition);
+                Enter(mind, HorrorState.Search, ArrivalReason());
             else if (StateTime >= Profile.lostTrackTimeout)
                 Enter(mind, HorrorState.Search, TransitionReason.LostTrackOver);
         }
@@ -144,7 +144,7 @@ namespace Nekuzaky.HorrorAI
                 if (next == _patrolIndex)
                 {
                     _waiting = true;
-                    _waitLeft = float.MaxValue;
+                    _waitLeft = Mathf.Max(RouteRecheck, Route.GetWait(_patrolIndex));
                     return;
                 }
                 _patrolIndex = next;
@@ -158,9 +158,13 @@ namespace Nekuzaky.HorrorAI
             _waitLeft = Route.GetWait(_patrolIndex);
         }
 
-        private void BeginSearch(HorrorMind mind)
+        private TransitionReason ArrivalReason() =>
+            _mover.Reachable ? TransitionReason.ReachedLastKnownPosition : TransitionReason.CouldNotReach;
+
+        private void BeginSearch(HorrorMind mind, TransitionReason reason)
         {
-            SearchCenter = mind.Memory.HasMemory || mind.Memory.Time > 0f ? mind.Memory.Position : _mover.Position;
+            var remembered = mind.Memory.HasMemory || mind.Memory.Time > 0f;
+            SearchCenter = remembered && reason != TransitionReason.CouldNotReach ? mind.Memory.Position : _mover.Position;
             TrailCount = 0;
             WaitAtSearchPoint();
         }

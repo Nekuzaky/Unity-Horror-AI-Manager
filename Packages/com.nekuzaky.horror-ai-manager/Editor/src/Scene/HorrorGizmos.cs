@@ -29,6 +29,18 @@ namespace Nekuzaky.HorrorAI.Editor
         private const float FootstepLoudness = 6f;
         private static readonly Vector3[] Trail = new Vector3[HorrorBrain.TrailLength];
         private static readonly HorrorNoise[] Noises = new HorrorNoise[16];
+        private static readonly GUIContent[] StateLabels =
+        {
+            new("Patrol"), new("Alert"), new("Investigate"), new("Search"), new("Chase"), new("Lost Track")
+        };
+        private static GUIStyle _labelStyle;
+
+        private static GUIStyle LabelStyle => _labelStyle ??= new GUIStyle(EditorStyles.boldLabel)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 11,
+            padding = new RectOffset(2, 2, 1, 1)
+        };
 
         static HorrorGizmos()
         {
@@ -58,10 +70,11 @@ namespace Nekuzaky.HorrorAI.Editor
             Handles.DrawLine(eye, eye + Quaternion.AngleAxis(half, Vector3.up) * forward * profile.viewRange);
             if (!selected)
                 return;
-            Handles.DrawWireDisc(enemy.transform.position, Vector3.up, profile.proximityRadius);
+            var feet = enemy.FeetPosition;
+            Handles.DrawWireDisc(feet, Vector3.up, profile.proximityRadius);
             Handles.color = new Color(0.4f, 0.7f, 1f, 0.5f);
-            Handles.DrawDottedLine(enemy.transform.position, enemy.transform.position + Vector3.right * FootstepLoudness * profile.hearingMultiplier, 3f);
-            Handles.DrawWireDisc(enemy.transform.position, Vector3.up, FootstepLoudness * profile.hearingMultiplier);
+            Handles.DrawDottedLine(feet, feet + Vector3.right * FootstepLoudness * profile.hearingMultiplier, 3f);
+            Handles.DrawWireDisc(feet, Vector3.up, FootstepLoudness * profile.hearingMultiplier);
             if (Application.isPlaying && enemy.IsActive)
                 DrawMind(enemy, color);
         }
@@ -70,14 +83,7 @@ namespace Nekuzaky.HorrorAI.Editor
         {
             var memory = enemy.Memory;
             if (memory.HasMemory || memory.Time > 0f)
-            {
-                var alpha = Mathf.Lerp(0.25f, 1f, memory.Certainty);
-                Handles.color = new Color(1f, 0.3f, 0.3f, alpha);
-                var p = memory.Position + Vector3.up * 0.05f;
-                Handles.DrawLine(p + new Vector3(-0.4f, 0f, -0.4f), p + new Vector3(0.4f, 0f, 0.4f), 3f);
-                Handles.DrawLine(p + new Vector3(-0.4f, 0f, 0.4f), p + new Vector3(0.4f, 0f, -0.4f), 3f);
-                Handles.DrawDottedLine(enemy.transform.position, p, 4f);
-            }
+                DrawLastKnown(enemy.FeetPosition, memory);
             Handles.color = color;
             if (enemy.IsMoving)
                 Handles.DrawLine(enemy.transform.position, enemy.Destination, 2f);
@@ -88,6 +94,20 @@ namespace Nekuzaky.HorrorAI.Editor
             var count = enemy.CopySearchTrail(Trail);
             for (var i = 1; i < count; i++)
                 Handles.DrawDottedLine(Trail[i - 1], Trail[i], 3f);
+        }
+
+        private static void DrawLastKnown(Vector3 feet, HorrorMemory memory)
+        {
+            var alpha = Mathf.Lerp(0.65f, 1f, memory.Certainty);
+            var p = memory.Position + Vector3.up * 0.05f;
+            Handles.color = new Color(0f, 0f, 0f, alpha * 0.8f);
+            Handles.DrawLine(p + new Vector3(-0.5f, 0f, -0.5f), p + new Vector3(0.5f, 0f, 0.5f), 9f);
+            Handles.DrawLine(p + new Vector3(-0.5f, 0f, 0.5f), p + new Vector3(0.5f, 0f, -0.5f), 9f);
+            Handles.color = new Color(1f, 0.25f, 0.25f, alpha);
+            Handles.DrawLine(p + new Vector3(-0.5f, 0f, -0.5f), p + new Vector3(0.5f, 0f, 0.5f), 5f);
+            Handles.DrawLine(p + new Vector3(-0.5f, 0f, 0.5f), p + new Vector3(0.5f, 0f, -0.5f), 5f);
+            Handles.DrawWireDisc(p, Vector3.up, 0.6f, 3f);
+            Handles.DrawDottedLine(feet + Vector3.up * 0.05f, p, 4f);
         }
 
         [DrawGizmo(GizmoType.Selected | GizmoType.NonSelected)]
@@ -116,6 +136,13 @@ namespace Nekuzaky.HorrorAI.Editor
         {
             Handles.color = new Color(1f, 0.9f, 0.4f, light.IsOn || !Application.isPlaying ? 0.6f : 0.15f);
             var position = light.transform.position;
+            if (light.IsDirectional)
+            {
+                var direction = light.Direction;
+                Handles.DrawLine(position, position + direction * 2f, 3f);
+                Handles.DrawWireDisc(position, direction, 0.5f);
+                return;
+            }
             if (!light.IsSpot)
             {
                 Handles.DrawWireDisc(position, Vector3.up, light.Range);
@@ -158,17 +185,25 @@ namespace Nekuzaky.HorrorAI.Editor
 
         private static void DrawBar(HorrorEnemy enemy)
         {
-            var head = enemy.transform.position + Vector3.up * (enemy.PerceptionProfile.eyeHeight + 0.6f);
+            var head = enemy.FeetPosition + Vector3.up * (enemy.PerceptionProfile.eyeHeight + 0.6f);
             var gui = HandleUtility.WorldToGUIPointWithDepth(head);
             if (gui.z < 0f)
                 return;
             Handles.BeginGUI();
+            var color = ColorOf(enemy.State);
             var rect = new Rect(gui.x - 30f, gui.y - 4f, 60f, 7f);
-            EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.6f));
+            EditorGUI.DrawRect(new Rect(rect.x - 1f, rect.y - 1f, rect.width + 2f, rect.height + 2f), new Color(0f, 0f, 0f, 0.85f));
             var fill = rect;
             fill.width *= Mathf.Clamp01(enemy.Suspicion);
-            EditorGUI.DrawRect(fill, ColorOf(enemy.State));
-            GUI.Label(new Rect(gui.x - 60f, gui.y - 22f, 120f, 18f), enemy.State.ToString(), EditorStyles.centeredGreyMiniLabel);
+            EditorGUI.DrawRect(fill, color);
+            var label = StateLabels[(int)enemy.State];
+            var style = LabelStyle;
+            var size = style.CalcSize(label);
+            var box = new Rect(gui.x - size.x * 0.5f - 4f, gui.y - 8f - size.y, size.x + 8f, size.y);
+            EditorGUI.DrawRect(box, new Color(0.05f, 0.05f, 0.06f, 0.88f));
+            EditorGUI.DrawRect(new Rect(box.x, box.yMax - 2f, box.width, 2f), color);
+            style.normal.textColor = Color.Lerp(color, Color.white, 0.55f);
+            GUI.Label(box, label, style);
             Handles.EndGUI();
         }
 

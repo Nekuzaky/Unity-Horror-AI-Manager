@@ -17,7 +17,7 @@
     "versionDefines": [
         {
             "name": "com.nekuzaky.resonance",
-            "expression": "0.5.1",
+            "expression": "0.6.0",
             "define": "HORROR_AI_RESONANCE"
         }
     ],

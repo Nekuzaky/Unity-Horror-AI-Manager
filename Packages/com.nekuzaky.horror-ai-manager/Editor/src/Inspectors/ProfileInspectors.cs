@@ -84,19 +84,22 @@ namespace Nekuzaky.HorrorAI.Editor
     {
         public static string Sight(PerceptionProfile profile)
         {
-            var lit = profile.sightGain > 0f ? 1f / profile.sightGain : float.PositiveInfinity;
-            var dark = profile.sightGain * profile.darkGain > 0f ? 1f / (profile.sightGain * profile.darkGain) : float.PositiveInfinity;
-            var farDark = profile.sightGain * profile.darkGain * profile.farGain > 0f ? 1f / (profile.sightGain * profile.darkGain * profile.farGain) : float.PositiveInfinity;
+            var ambient = HorrorAI.AmbientLight;
+            var darkRate = profile.sightGain * SightMath.LightFactor(ambient, profile.darkGain);
             var reach = 6f * profile.hearingMultiplier;
             var open = reach * (1f - profile.hearingThreshold);
             var walled = profile.wallDamping > profile.hearingThreshold ? reach * (1f - profile.hearingThreshold / profile.wallDamping) : 0f;
-            return $"A standing target in plain view is spotted in {lit:0.0} s when lit, {dark:0.0} s in the dark close by, " +
-                   $"{farDark:0.0} s in the dark at {profile.viewRange:0} m. A footstep of loudness 6 is heard up to {open:0.#} m in the open, " +
-                   $"{walled:0.#} m through one wall.";
+            return "A standing target in plain view is spotted in " + Seconds(profile.sightGain) + " when lit, " + Seconds(darkRate) +
+                   " in the dark close by, " + Seconds(darkRate * profile.farGain) + " in the dark at " + InspectorKit.Number(profile.viewRange, "0") +
+                   " m (ambient light " + InspectorKit.Percent(ambient) + "). A footstep of loudness 6 is heard up to " + InspectorKit.Number(open, "0.#") +
+                   " m in the open, " + InspectorKit.Number(walled, "0.#") + " m through one wall.";
         }
 
         public static string Summary(PerceptionProfile perception, BehaviorProfile behavior) =>
-            Sight(perception) + $"\nIt stares for {behavior.alertDuration:0.#} s, searches for {behavior.searchDuration:0} s within {behavior.searchRadius:0} m, " +
-            $"and chases at {behavior.chaseSpeed:0.#} m/s.";
+            Sight(perception) + "\nIt stares for " + InspectorKit.Number(behavior.alertDuration, "0.#") + " s, searches for " +
+            InspectorKit.Number(behavior.searchDuration, "0") + " s within " + InspectorKit.Number(behavior.searchRadius, "0") + " m, and chases at " +
+            InspectorKit.Number(behavior.chaseSpeed, "0.#") + " m/s.";
+
+        private static string Seconds(float rate) => rate > 0f ? InspectorKit.Number(1f / rate, "0.0") + " s" : "never";
     }
 }

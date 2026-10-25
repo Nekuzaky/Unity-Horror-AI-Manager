@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Threading;
 using NUnit.Framework;
+using UnityEditor.Events;
 using UnityEngine;
 using UnityEngine.TestTools.Constraints;
 using Debug = UnityEngine.Debug;
@@ -15,6 +17,70 @@ namespace Nekuzaky.HorrorAI.Tests
         public void AllocationCheck_SeesSmallAllocations()
         {
             Assert.That(() => { _keep = new int[4]; }, Is.AllocatingGCMemory());
+        }
+
+        [Test]
+        public void AllocationCounter_SeesADeliberateAllocation()
+        {
+            var before = GcCounter.Bytes;
+
+            _keep = new byte[4096];
+
+            Assert.IsTrue(GcCounter.Available);
+            Assert.GreaterOrEqual(GcCounter.Bytes - before, 4096);
+        }
+
+        [Test]
+        public void AllocationCounter_IgnoresWhatOtherThreadsAllocate()
+        {
+            WorkerAllocation();
+
+            var other = WorkerAllocation();
+            GcCounter.Mark(out var bytes, out var allocations);
+            _keep = new byte[4096];
+            var own = GcCounter.Since(bytes, allocations);
+
+            Assert.AreEqual(0, other);
+            Assert.GreaterOrEqual(own, 4096);
+        }
+
+        private static long WorkerAllocation()
+        {
+            using var go = new ManualResetEventSlim();
+            using var done = new ManualResetEventSlim();
+            var worker = new Thread(() =>
+            {
+                go.Wait();
+                _keep = new byte[4096];
+                done.Set();
+            });
+            worker.Start();
+            _keep = go.WaitHandle;
+            _keep = done.WaitHandle;
+            GcCounter.Mark(out var bytes, out var allocations);
+            go.Set();
+            done.Wait();
+            var measured = GcCounter.Since(bytes, allocations);
+            worker.Join();
+            return measured;
+        }
+
+        [Test]
+        public void Stats_CountWhatTheUpdateAllocates()
+        {
+            var enemy = Enemy(Vector3.zero, Vector3.forward, Archetype(out _, out _));
+            enemy.onAlerted.AddListener(() => _keep = new byte[4096]);
+            HorrorAI.EmitNoise(new Vector3(0f, 0f, 3f), 15f);
+            var allocated = 0L;
+
+            for (var i = 0; i < 30 && enemy.State != HorrorState.Alert; i++)
+            {
+                World.Tick(Frame);
+                allocated = World.Stats.AllocatedBytes;
+            }
+
+            Assert.AreEqual(HorrorState.Alert, enemy.State);
+            Assert.GreaterOrEqual(allocated, 4096);
         }
 
         [Test]
@@ -41,6 +107,33 @@ namespace Nekuzaky.HorrorAI.Tests
             Flicker(target, 900);
 
             Assert.That(() => Flicker(target, 900), Is.Not.AllocatingGCMemory());
+        }
+
+        [Test]
+        public void FirstChangesOfMindAndTheirEvents_AllocateNothing()
+        {
+            var target = BuildScene(10);
+            target.visibilityMultiplier = 0f;
+            target.transform.position = new Vector3(0f, -50f, 0f);
+            Tick(120);
+
+            Assert.That(() => Flicker(target, 900), Is.Not.AllocatingGCMemory());
+            Assert.AreEqual(0, World.Stats.AllocatedBytes);
+        }
+
+        [Test]
+        public void FirstEventWithPersistentListeners_AllocatesNothing()
+        {
+            var enemy = Enemy(Vector3.zero, Vector3.forward, Archetype(out _, out _), false);
+            var flag = Track(new GameObject("Listener")).transform;
+            UnityEventTools.AddVoidPersistentListener(enemy.onAlerted, flag.DetachChildren);
+            UnityEventTools.AddVoidPersistentListener(enemy.onStateChanged, flag.DetachChildren);
+            World.Add(enemy);
+            Tick(10);
+            HorrorAI.EmitNoise(new Vector3(0f, 0f, 3f), 15f);
+
+            Assert.That(() => Tick(20), Is.Not.AllocatingGCMemory());
+            Assert.AreEqual(HorrorState.Alert, enemy.State);
         }
 
         [Test]

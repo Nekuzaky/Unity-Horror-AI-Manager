@@ -1,8 +1,11 @@
 using System.Collections.Generic;
+using System.Reflection;
 using Nekuzaky.HorrorAI.Integrations;
 using Nekuzaky.Resonance;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Constraints;
+using Is = UnityEngine.TestTools.Constraints.Is;
 
 namespace Nekuzaky.HorrorAI.Tests
 {
@@ -12,6 +15,7 @@ namespace Nekuzaky.HorrorAI.Tests
 
         private readonly List<Object> _created = new();
         private readonly List<HorrorNoise> _noises = new();
+        private static string _label;
 
         [SetUp]
         public void Listen()
@@ -126,6 +130,40 @@ namespace Nekuzaky.HorrorAI.Tests
             var label = HorrorHindsight.Label(enemy, new HorrorTransition(HorrorState.Search, HorrorState.Patrol, TransitionReason.GaveUp, 3f));
 
             Assert.AreEqual("Ghoul: Search > Patrol (gave up the search)", label);
+        }
+
+        [Test]
+        public void Hindsight_LabelsAreBuiltOnceWhenTheEnemyIsAddedThenReused()
+        {
+            var enemy = Track(new GameObject("Ghoul")).AddComponent<HorrorEnemy>();
+            HorrorHindsight.OnEnemyAdded(enemy);
+            var spotted = new HorrorTransition(HorrorState.Patrol, HorrorState.Chase, TransitionReason.Spotted, 1f);
+            var first = HorrorHindsight.Label(enemy, spotted);
+
+            Assert.That(() => { _label = HorrorHindsight.Label(enemy, spotted); }, Is.Not.AllocatingGCMemory());
+            Assert.AreSame(first, HorrorHindsight.Label(enemy, new HorrorTransition(HorrorState.Patrol, HorrorState.Chase, TransitionReason.Spotted, 9f)));
+            HorrorHindsight.OnEnemyRemoved(enemy);
+        }
+
+        [Test]
+        public void Hindsight_InstallsAfterThePlayModeResetSoItIsNeverWiped()
+        {
+            var install = typeof(HorrorHindsight).GetMethod("Install", BindingFlags.Static | BindingFlags.NonPublic);
+            var attribute = (RuntimeInitializeOnLoadMethodAttribute)install.GetCustomAttribute(typeof(RuntimeInitializeOnLoadMethodAttribute));
+            var bookmarked = 0;
+            void Count(HorrorEnemy enemy, HorrorTransition transition) => bookmarked++;
+
+            HorrorAI.ResetSession();
+            HorrorHindsight.Install();
+            var installed = typeof(HorrorAI).GetField("StateChanged", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            HorrorAI.StateChanged += Count;
+            HorrorAI.RaiseStateChanged(null, default);
+            HorrorAI.ResetSession();
+            HorrorAI.NoiseEmitted += OnNoise;
+
+            Assert.AreEqual(RuntimeInitializeLoadType.AfterAssembliesLoaded, attribute.loadType);
+            Assert.AreEqual(1, bookmarked);
+            Assert.IsNotNull(installed);
         }
 
         [Test]

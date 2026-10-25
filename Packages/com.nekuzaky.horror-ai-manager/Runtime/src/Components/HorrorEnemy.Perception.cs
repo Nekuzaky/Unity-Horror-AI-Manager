@@ -63,10 +63,10 @@ namespace Nekuzaky.HorrorAI
         {
             var points = target.SampleCount;
             var visible = 0;
-            var root = target.transform;
+            var owner = target.Colliders;
             for (var p = 0; p < points; p++)
             {
-                if (world.CanSee(eyePosition, target.GetSamplePoint(p), profile.occluders, root))
+                if (world.CanSee(eyePosition, target.GetSamplePoint(p), profile.occluders, owner))
                     visible++;
             }
             return points > 0 ? (float)visible / points : 0f;
@@ -109,11 +109,21 @@ namespace Nekuzaky.HorrorAI
                 var distance = Vector3.Distance(noise.Position, ear);
                 if (distance >= HearingMath.Reach(noise.Loudness, profile.hearingMultiplier))
                     continue;
-                var walls = world.CountWalls(noise.Position, ear, profile.occluders, transform, noise.Source != null ? noise.Source.transform : null);
+                var source = noise.Source;
+                var walls = world.CountWalls(noise.Position, ear, profile.occluders, _colliders, CollidersOf(source), source != null);
                 var level = HearingMath.Perceived(noise.Loudness, distance, profile.hearingMultiplier, walls, profile.wallDamping);
                 if (level >= profile.hearingThreshold)
                     Hear(profile, noise, level, now);
             }
+        }
+
+        private static ColliderSet CollidersOf(GameObject source)
+        {
+            if (source == null)
+                return null;
+            if (source.TryGetComponent(out HorrorTarget target))
+                return target.Colliders;
+            return source.TryGetComponent(out HorrorEnemy enemy) ? enemy._colliders : null;
         }
 
         private void Hear(PerceptionProfile profile, HorrorNoise noise, float level, float now)
