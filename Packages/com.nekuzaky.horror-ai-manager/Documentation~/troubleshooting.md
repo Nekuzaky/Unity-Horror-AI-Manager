@@ -56,9 +56,12 @@ the three calls the runtime makes to it are removed by the compiler. In the Edit
 a null check; with it open, recording allocates nothing and the display refreshes ten times a second. See
 [What it costs](dashboard.md#what-it-costs).
 
-**The dashboard shows a few hundred bytes of garbage in the Editor.** The counter measures everything that runs inside
-the update, editor work included. The Windows development player checked by `Tools/Build-Check.ps1` allocates 0 B;
-measure there (or with the benchmark) before worrying.
+**The dashboard shows 616 to 684 B of garbage when the enemy changes its mind.** That enemy is selected. While an
+Inspector shows a `Horror Enemy` whose Unity Events have persistent listeners, Unity marks them dirty and rebuilds them
+by reflection the next time an event fires (`UnityEventBase.RebuildPersistentCallsIfNeeded`, called from the enemy's
+change of mind). It is editor-only work done by Unity, not by the dashboard, and it happens on every change of mind of
+the selected enemy. Deselect it and the update is back to 0 B; players never do it (the Windows development player
+checked by `Tools/Build-Check.ps1` allocates 0 B).
 
 **Can several enemies share an archetype?** Yes, and they should: the profiles are read, never written, at runtime.
 

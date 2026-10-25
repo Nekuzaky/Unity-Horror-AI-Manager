@@ -106,6 +106,58 @@ namespace Nekuzaky.HorrorAI.Editor
         public bool Heard;
     }
 
+    internal sealed class NoiseHearers
+    {
+        #region Public
+
+        public const int Named = 6;
+
+        public int Sequence { get; private set; } = -1;
+
+        public int HeardCount { get; private set; }
+
+        public int MissedCount { get; private set; }
+
+        public int NamedCount { get; private set; }
+
+        public HearingRecord this[int loudestFirst] => _records[loudestFirst];
+
+        public void Reset(int sequence)
+        {
+            Sequence = sequence;
+            HeardCount = 0;
+            MissedCount = 0;
+            for (var i = 0; i < NamedCount; i++)
+                _records[i] = default;
+            NamedCount = 0;
+        }
+
+        public void Add(in HearingRecord record)
+        {
+            if (!record.Heard)
+            {
+                MissedCount++;
+                return;
+            }
+            HeardCount++;
+            if (NamedCount == Named && record.Level <= _records[Named - 1].Level)
+                return;
+            var index = NamedCount < Named ? NamedCount++ : Named - 1;
+            for (; index > 0 && _records[index - 1].Level < record.Level; index--)
+                _records[index] = _records[index - 1];
+            _records[index] = record;
+        }
+
+        #endregion
+
+
+        #region Private and Protected
+
+        private readonly HearingRecord[] _records = new HearingRecord[Named];
+
+        #endregion
+    }
+
     internal sealed class EnemyTrack
     {
         #region Public
@@ -168,6 +220,8 @@ namespace Nekuzaky.HorrorAI.Editor
         {
             for (var i = 0; i < Spare; i++)
                 _pool.Push(new EnemyTrack());
+            for (var i = 0; i < _noises.Length; i++)
+                _noises[i] = new NoiseHearers();
         }
 
         public readonly FloatRing FrameCost = new(FrameCapacity);
@@ -214,6 +268,9 @@ namespace Nekuzaky.HorrorAI.Editor
             ReleaseTracks();
             _hearingCount = 0;
             _hearingHead = 0;
+            _firstNoise = -1;
+            for (var i = 0; i < _noises.Length; i++)
+                _noises[i].Reset(-1);
             _bucketCost = 0d;
             _bucketFrames = 0;
             _nextBucket = 0f;
@@ -237,6 +294,16 @@ namespace Nekuzaky.HorrorAI.Editor
 
         public HearingRecord Hearing(int newestFirst) => _hearings[(_hearingHead - 1 - newestFirst + HearingCapacity * 2) % HearingCapacity];
 
+        public NoiseHearers HearersOf(int sequence)
+        {
+            if (sequence < 0)
+                return null;
+            var hearers = _noises[sequence % HorrorWorld.NoiseCapacity];
+            return hearers.Sequence == sequence ? hearers : null;
+        }
+
+        public bool Recorded(int sequence) => _firstNoise >= 0 && sequence >= _firstNoise;
+
         public void Ticked(HorrorWorld world)
         {
             if (!ReferenceEquals(world, _world))
@@ -246,6 +313,8 @@ namespace Nekuzaky.HorrorAI.Editor
                 _world = world;
                 _nextBucket = world.Now + BucketSeconds;
             }
+            if (_firstNoise < 0)
+                _firstNoise = world.NoiseSequence;
             var stats = world.Stats;
             FrameCost.Push(stats.Milliseconds);
             FrameRays.Push(stats.Raycasts);
@@ -270,7 +339,15 @@ namespace Nekuzaky.HorrorAI.Editor
 
         public void Heard(HorrorEnemy enemy, int noise, float level, int walls, bool heard)
         {
-            _hearings[_hearingHead] = new HearingRecord { Noise = noise, Enemy = enemy, Level = level, Walls = walls, Heard = heard };
+            var record = new HearingRecord { Noise = noise, Enemy = enemy, Level = level, Walls = walls, Heard = heard };
+            _hearings[_hearingHead] = record;
+            if (noise >= 0)
+            {
+                var hearers = _noises[noise % HorrorWorld.NoiseCapacity];
+                if (hearers.Sequence != noise)
+                    hearers.Reset(noise);
+                hearers.Add(record);
+            }
             _hearingHead = (_hearingHead + 1) % HearingCapacity;
             if (_hearingCount < HearingCapacity)
                 _hearingCount++;
@@ -294,6 +371,8 @@ namespace Nekuzaky.HorrorAI.Editor
         private readonly Stack<EnemyTrack> _pool = new(TrackLimit);
         private readonly HearingRecord[] _hearings = new HearingRecord[HearingCapacity];
         private readonly float[] _scratch = new float[FrameCapacity];
+        private readonly NoiseHearers[] _noises = new NoiseHearers[HorrorWorld.NoiseCapacity];
+        private int _firstNoise = -1;
         private HorrorWorld _world;
         private int _hearingHead;
         private int _hearingCount;

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
 namespace Nekuzaky.HorrorAI.Editor
@@ -117,6 +119,10 @@ namespace Nekuzaky.HorrorAI.Editor
             titleContent = new GUIContent(Title, Glyphs.Tile("HorrorAI"), "Enemies, noises, setup and archetypes of Horror AI Manager");
             _sampler.Attach();
             EditorApplication.hierarchyChanged += MarkScene;
+            EditorSceneManager.sceneOpened += OnSceneOpened;
+            EditorSceneManager.newSceneCreated += OnSceneCreated;
+            EditorSceneManager.activeSceneChangedInEditMode += OnActiveSceneChanged;
+            EditorSceneManager.sceneClosed += OnSceneClosed;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             Selection.selectionChanged += OnSelectionChanged;
         }
@@ -126,6 +132,10 @@ namespace Nekuzaky.HorrorAI.Editor
             _sampler.Detach();
             _sampler.Clear();
             EditorApplication.hierarchyChanged -= MarkScene;
+            EditorSceneManager.sceneOpened -= OnSceneOpened;
+            EditorSceneManager.newSceneCreated -= OnSceneCreated;
+            EditorSceneManager.activeSceneChangedInEditMode -= OnActiveSceneChanged;
+            EditorSceneManager.sceneClosed -= OnSceneClosed;
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             Selection.selectionChanged -= OnSelectionChanged;
         }
@@ -261,6 +271,14 @@ namespace Nekuzaky.HorrorAI.Editor
             if (_sceneDirtyAt <= 0d)
                 _sceneDirtyAt = EditorApplication.timeSinceStartup + SceneDelay;
         }
+
+        private void OnSceneOpened(Scene scene, OpenSceneMode mode) => NotifyScene();
+
+        private void OnSceneCreated(Scene scene, NewSceneSetup setup, NewSceneMode mode) => NotifyScene();
+
+        private void OnActiveSceneChanged(Scene previous, Scene next) => NotifyScene();
+
+        private void OnSceneClosed(Scene scene) => MarkScene();
 
         private void NotifyScene()
         {

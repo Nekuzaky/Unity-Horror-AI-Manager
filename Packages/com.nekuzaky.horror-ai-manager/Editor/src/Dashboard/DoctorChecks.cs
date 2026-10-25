@@ -107,6 +107,10 @@ namespace Nekuzaky.HorrorAI.Editor
             if (count == 0)
                 checks.Add(new DoctorCheck(CheckLevel.Error, "No Horror Target", "Enemies have nobody to see. Put one on the player.",
                     "Add a Horror Target to the player", () => SceneFixes.AddTarget()));
+            else if (SceneFixes.CountMisplacedTargets() > 0)
+                checks.Add(new DoctorCheck(CheckLevel.Warning, "A Horror Target is not on the player",
+                    "It sits on level geometry, the NavMesh or an enemy. Enemies would look for that object instead of the player.",
+                    "Move it to the player", () => SceneFixes.MoveTargetsToPlayer()));
             else if (count > HorrorWorld.MaxTargetsPerEnemy)
                 checks.Add(new DoctorCheck(CheckLevel.Info, Plural(count, "Horror Target", "Horror Targets"),
                     "Each enemy watches the four first ones only."));

@@ -29,10 +29,13 @@ The header holds the tabs, a pill that says **Edit Mode**, **Play Mode** or **Pa
   spread over frames).
 - **Garbage per frame**: the bytes the update allocated in the last frame and the worst of the last 600, read from
   Unity's profiler counters (`HorrorAI.Stats.AllocatedBytes`). It says *n/a* where those counters do not exist (a
-  release player). In the interactive Editor the counter can also catch editor-only work that runs inside the update:
-  in the demo, the first change of mind of the enemy shows a few hundred bytes once in the Editor, while the Windows
-  development player checked by `Tools/Build-Check.ps1` allocates 0 B.
-- **Enemies running**, with the number of targets and lights.
+  release player). In the Editor, while an Inspector shows a `Horror Enemy` whose Unity Events have persistent
+  listeners (the demo enemy has some), Unity marks those listeners dirty and rebuilds them by reflection
+  (`UnityEventBase.RebuildPersistentCallsIfNeeded`) the next time the enemy raises an event. Each change of mind of the
+  selected enemy then shows 616 to 684 B. It is Unity's editor work, not the dashboard (it happens with the window
+  closed too), it stops when the enemy is deselected, and it does not exist in players: the Windows development player
+  checked by `Tools/Build-Check.ps1` allocates 0 B.
+- **Enemies running**, with the number of targets and lights (*Enemies in the scene* in Edit Mode).
 - Two graphs of the **last 30 seconds**: the AI cost per frame and the highest suspicion.
 
 In Edit Mode the page counts the enemies, targets and lights of the open scenes.
@@ -54,8 +57,9 @@ The panel on the right shows the picked enemy:
 - **Suspicion, last 30 seconds**.
 - **Changes of mind**: the last 16 transitions, newest first, with how long ago, from and to, and why.
 
-In Edit Mode the list shows the enemies of the open scenes with their archetype and how many things their inspector
-asks you to check.
+In Edit Mode the list shows the enemies of the open scenes (*Not running*) and how many things their inspector asks
+you to check; it follows the scene when you open, create or switch scenes. Below about 600 px wide, the list and the
+panel stack vertically.
 
 ## Noises
 
@@ -63,7 +67,8 @@ asks you to check.
 
 The last 64 noises, newest first: when, what made it (*a script* when there is no source), its loudness in meters,
 where, and which enemies heard it, with the level left after distance and walls (*Ghoul 26% (1 wall)*), and how many
-were in reach but found it too faint. Click a noise to show it in the Scene view: the view moves to it, rings pulse
+were in reach but found it too faint. The six loudest hearers are named, then *and 12 more*: the summary is kept
+for each of the 64 noises, so it holds with fifty enemies. Click a noise to show it in the Scene view: the view moves to it, rings pulse
 there for two seconds and its source is pinged in the Hierarchy.
 
 ## Setup
@@ -76,7 +81,8 @@ Checks the open scenes and fixes what it can in one click. Every fix can be undo
 |---|---|
 | There is at least one Horror Enemy | Add an enemy |
 | A NavMesh is baked and every enemy with an agent stands on it | Bake a NavMesh |
-| There is a Horror Target | Add a Horror Target to the player |
+| There is a Horror Target | Add a Horror Target to the player: the object tagged `Player`, else the root of the main camera, else a new `Player` object |
+| No Horror Target sits on level geometry (static), the NavMesh Surface or an enemy | Move it to the player |
 | Every point and spot light is marked for the AI (lights carried by an enemy are skipped) | Mark every light |
 | Every Horror Light Source on a Light is linked to it | Link them |
 | Every enemy has an archetype | Use the Patroller preset |
@@ -110,7 +116,7 @@ Nothing when the window is closed, and nothing in a build.
 - The window lives in the editor assembly, which is never part of a build.
 - While it is open, it records into buffers allocated once: 600 frames of cost, rays, perceptions and garbage,
   30 seconds of history at ten samples a second, the last 16 changes of mind and 30 seconds of suspicion per enemy,
-  and the last 256 hearings. Recording a frame allocates nothing; the tests check it, and check that the update still
+  the last 256 hearings, and a summary of who heard each of the last 64 noises. Recording a frame allocates nothing; the tests check it, and check that the update still
   allocates 0 B with the window open.
 - The display refreshes ten times a second, only the visible tab, only while the window is visible. Lists reuse their
   rows; labels change only when their value does, and numbers come from cached strings, so a refresh where nothing

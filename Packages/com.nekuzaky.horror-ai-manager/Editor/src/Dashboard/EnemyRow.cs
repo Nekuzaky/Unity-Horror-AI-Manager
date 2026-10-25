@@ -46,6 +46,8 @@ namespace Nekuzaky.HorrorAI.Editor
 
         public Label Reason => _reason;
 
+        public Label TargetLabel => _target;
+
         public void Bind(HorrorEnemy enemy)
         {
             Enemy = enemy;
@@ -65,7 +67,7 @@ namespace Nekuzaky.HorrorAI.Editor
             Ui.SetText(_name, Text.Name(enemy));
             if (!enemy.IsActive)
             {
-                ShowIdle(enemy.archetype != null ? Text.Name(enemy.archetype) : "no archetype", setup ?? string.Empty);
+                ShowIdle(Text.None, setup ?? string.Empty);
                 return;
             }
             ShowState((int)enemy.State);

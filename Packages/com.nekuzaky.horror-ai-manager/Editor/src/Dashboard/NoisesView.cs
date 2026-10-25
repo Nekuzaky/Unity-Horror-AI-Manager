@@ -34,15 +34,19 @@ namespace Nekuzaky.HorrorAI.Editor
             _list.style.flexGrow = 1f;
             _list.selectedIndicesChanged += OnPicked;
             page.Add(_list);
+            _empty = Ui.Styled(EmptyEdit, "ha-list-empty");
+            page.Add(_empty);
             Root.Add(page);
         }
 
         public IReadOnlyList<int> Items => _items;
 
+        public Label Empty => _empty;
+
         public void Refresh(DashboardSampler sampler)
         {
             var playing = Application.isPlaying;
-            Ui.SetText(_hint, playing ? (_items.Count == 0 ? QuietHint : PlayHint) : EditHint);
+            Ui.SetText(_hint, playing ? PlayHint : EditHint);
             _sampler = sampler;
             if (sampler.HearingVersion != _hearingVersion)
             {
@@ -53,6 +57,9 @@ namespace Nekuzaky.HorrorAI.Editor
                 _list.RefreshItems();
             for (var i = 0; i < _bound.Count; i++)
                 Update(_bound[i]);
+            Ui.SetText(_empty, playing ? EmptyPlay : EmptyEdit);
+            Ui.SetVisible(_empty, _items.Count == 0);
+            Ui.SetVisible(_list, _items.Count > 0);
         }
 
         public string HeardBy(int sequence)
@@ -79,7 +86,10 @@ namespace Nekuzaky.HorrorAI.Editor
 
         private const string EditHint = "Noises appear here in Play Mode: footsteps, falling bottles, anything sent with HorrorAI.EmitNoise or a Noise Emitter.";
         private const string PlayHint = "The last noises, newest first, and who heard them after distance and walls. Click one to show it in the Scene view.";
-        private const string QuietHint = "No noise yet. Make one: walk, run, knock something over.";
+        private const string Nobody = "nobody";
+        private const string NotRecorded = "not recorded (made before the dashboard opened)";
+        private const string EmptyPlay = "No noise yet. Walk, run or knock something over, and it shows up here.";
+        private const string EmptyEdit = "No noise yet.";
 
         private sealed class Row
         {
@@ -98,6 +108,7 @@ namespace Nekuzaky.HorrorAI.Editor
         private readonly StringBuilder _builder = new(256);
         private readonly ListView _list;
         private readonly Label _hint;
+        private readonly Label _empty;
         private DashboardSampler _sampler;
         private int _hearingVersion = -1;
         private int _lastSequence = -1;
@@ -180,29 +191,29 @@ namespace Nekuzaky.HorrorAI.Editor
         {
             if (_sampler == null)
                 return Text.None;
+            var hearers = _sampler.HearersOf(sequence);
+            if (hearers == null)
+                return _sampler.Recorded(sequence) ? Nobody : NotRecorded;
             _builder.Clear();
-            var missed = 0;
-            for (var i = 0; i < _sampler.HearingCount; i++)
-            {
-                var record = _sampler.Hearing(i);
-                if (record.Noise != sequence || record.Enemy == null)
-                    continue;
-                if (!record.Heard)
-                {
-                    missed++;
-                    continue;
-                }
-                if (_builder.Length > 0)
-                    _builder.Append(", ");
-                _builder.Append(Text.Name(record.Enemy)).Append(' ').Append(Text.Percent(record.Level));
-                if (record.Walls > 0)
-                    _builder.Append(" (").Append(record.Walls.ToString(CultureInfo.InvariantCulture)).Append(record.Walls == 1 ? " wall)" : " walls)");
-            }
+            for (var i = 0; i < hearers.NamedCount; i++)
+                Append(hearers[i]);
+            var more = hearers.HeardCount - hearers.NamedCount;
+            if (more > 0)
+                _builder.Append(" and ").Append(more.ToString(CultureInfo.InvariantCulture)).Append(" more");
             if (_builder.Length == 0)
-                _builder.Append("nobody");
-            if (missed > 0)
-                _builder.Append("; too faint for ").Append(missed.ToString(CultureInfo.InvariantCulture));
+                _builder.Append(Nobody);
+            if (hearers.MissedCount > 0)
+                _builder.Append("; too faint for ").Append(hearers.MissedCount.ToString(CultureInfo.InvariantCulture));
             return _builder.ToString();
+        }
+
+        private void Append(HearingRecord record)
+        {
+            if (_builder.Length > 0)
+                _builder.Append(", ");
+            _builder.Append(record.Enemy != null ? Text.Name(record.Enemy) : "(destroyed)").Append(' ').Append(Text.Percent(record.Level));
+            if (record.Walls > 0)
+                _builder.Append(" (").Append(record.Walls.ToString(CultureInfo.InvariantCulture)).Append(record.Walls == 1 ? " wall)" : " walls)");
         }
 
         private void OnPicked(IEnumerable<int> indices)

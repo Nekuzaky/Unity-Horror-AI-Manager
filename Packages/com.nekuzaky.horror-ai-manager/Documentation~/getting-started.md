@@ -14,7 +14,7 @@ Its inspector lists what is missing, in plain words, each with a button:
 
 - *There is no NavMesh under this enemy* → **Bake a NavMesh** adds a `NavMesh Surface` to the scene and bakes it.
 - *There is no Horror Target in the scene* → **Add a Horror Target to the player** puts one on the object tagged
-  `Player` (or the root of the main camera).
+  `Player`, or the root of the main camera, or a new `Player` object when there is neither.
 - *No patrol route* → **Create a patrol route** adds two waypoints in front of the enemy. Move them, add more with
   **Add a waypoint** (see [Patrol routes](patrol-routes.md)).
 - *No light is marked for the AI* → **Mark every light** adds a `Horror Light Source` to every point and spot light.

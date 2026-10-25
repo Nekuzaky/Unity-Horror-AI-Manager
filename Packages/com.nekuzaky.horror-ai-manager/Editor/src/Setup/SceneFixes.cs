@@ -20,6 +20,33 @@ namespace Nekuzaky.HorrorAI.Editor
 
         public static int CountTargets() => Object.FindObjectsByType<HorrorTarget>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length;
 
+        public static bool IsMisplaced(HorrorTarget target)
+        {
+            var host = target.gameObject;
+            return host.isStatic || host.GetComponent<NavMeshSurface>() != null || host.GetComponentInParent<HorrorEnemy>() != null;
+        }
+
+        public static int CountMisplacedTargets()
+        {
+            var count = 0;
+            foreach (var target in Object.FindObjectsByType<HorrorTarget>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (IsMisplaced(target))
+                    count++;
+            }
+            return count;
+        }
+
+        public static HorrorTarget MoveTargetsToPlayer()
+        {
+            foreach (var target in Object.FindObjectsByType<HorrorTarget>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (IsMisplaced(target))
+                    Undo.DestroyObjectImmediate(target);
+            }
+            return AddTarget();
+        }
+
         public static int CountEnemies() => Object.FindObjectsByType<HorrorEnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length;
 
         public static int CountLights() => Object.FindObjectsByType<HorrorLightSource>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length;
@@ -161,9 +188,7 @@ namespace Nekuzaky.HorrorAI.Editor
             if (tagged != null)
                 return tagged;
             var camera = Camera.main;
-            if (camera != null)
-                return camera.transform.root.gameObject;
-            return Selection.activeGameObject;
+            return camera != null ? camera.transform.root.gameObject : null;
         }
 
         private static Vector3 SpawnPoint(MenuCommand command)

@@ -191,6 +191,148 @@ namespace Nekuzaky.HorrorAI.Tests
         }
 
         [Test]
+        public void Noises_NameTheHearersWithFiftyEnemies()
+        {
+            var archetype = Archetype(out _, out _);
+            for (var i = 0; i < 50; i++)
+            {
+                var angle = i * Mathf.PI * 2f / 50f;
+                Enemy(new Vector3(Mathf.Cos(angle) * 4f, 0f, Mathf.Sin(angle) * 4f), Vector3.forward, archetype);
+            }
+            for (var i = 0; i < 8; i++)
+            {
+                HorrorAI.EmitNoise(new Vector3(0f, 0.5f, 0f), 20f);
+                Tick(15);
+            }
+            Tick(120);
+            var view = new NoisesView();
+            view.Refresh(_sampler);
+
+            Assert.Greater(50 * 8, DashboardSampler.HearingCapacity);
+            Assert.AreEqual(50, _sampler.HearersOf(0).HeardCount);
+            StringAssert.Contains("Enemy", view.HeardBy(0));
+            StringAssert.Contains("and 44 more", view.HeardBy(0));
+            StringAssert.DoesNotContain("nobody", view.HeardBy(0));
+            Assert.AreEqual(50, _sampler.HearersOf(7).HeardCount);
+            var enemy = World.Enemies[0];
+            Assert.That(() => _sampler.Heard(enemy, 7, 0.9f, 1, true), Is.Not.AllocatingGCMemory());
+            Assert.That(() => _sampler.Heard(enemy, 8, 0.1f, 0, false), Is.Not.AllocatingGCMemory());
+        }
+
+        [Test]
+        public void Noises_SayNoNoiseYetInPlainWords()
+        {
+            var view = new NoisesView();
+            view.Refresh(_sampler);
+
+            Assert.AreEqual(0, view.Items.Count);
+            Assert.AreEqual("No noise yet.", view.Empty.text);
+            Assert.AreEqual(UnityEngine.UIElements.DisplayStyle.Flex, view.Empty.style.display.value);
+        }
+
+        [Test]
+        public void Overview_ForgetsPlayModeWhenItStops()
+        {
+            Crowd(3);
+            Tick(60);
+            var view = new OverviewView();
+            view.Refresh(_sampler, true);
+
+            Assert.IsNotNull(view.CostGraph.Source);
+            Assert.AreEqual("Enemies running", view.Scene.Label.text);
+            Assert.Greater(CountAll(view), 0);
+
+            view.Refresh(_sampler, false);
+
+            Assert.IsNull(view.CostGraph.Source);
+            Assert.AreEqual(Text.None, view.CostValue.text);
+            Assert.AreEqual(Text.None, view.Cost.Value.text);
+            Assert.AreEqual(Text.None, view.Garbage.Value.text);
+            Assert.AreEqual("Enemies in the scene", view.Scene.Label.text);
+            Assert.AreEqual(0, CountAll(view));
+        }
+
+        [Test]
+        public void EnemyRow_InEditModeShowsNoTarget()
+        {
+            var archetype = Archetype(out _, out _);
+            archetype.name = "Stalker";
+            var enemy = Enemy(Vector3.zero, Vector3.forward, archetype, false);
+            var row = new EnemyRow();
+            row.Bind(enemy);
+            row.Update("ready to run");
+
+            Assert.AreEqual(EnemyRow.NotRunning, row.Chip.text);
+            Assert.AreEqual(Text.None, row.TargetLabel.text);
+            Assert.AreEqual("ready to run", row.Reason.text);
+        }
+
+        [Test]
+        public void Enemies_DropDestroyedEnemiesAndStackWhenNarrow()
+        {
+            var archetype = Archetype(out _, out _);
+            var first = Enemy(Vector3.zero, Vector3.forward, archetype, false);
+            Enemy(new Vector3(3f, 0f, 0f), Vector3.forward, archetype, false);
+            var view = new EnemiesView();
+            view.SceneChanged();
+            view.Refresh(_sampler);
+            var before = view.Items.Count;
+
+            Object.DestroyImmediate(first.gameObject);
+            view.Refresh(_sampler);
+
+            Assert.GreaterOrEqual(before, 2);
+            Assert.AreEqual(before - 1, view.Items.Count);
+            foreach (var enemy in view.Items)
+                Assert.IsTrue(enemy != null);
+            view.Resize(500f);
+            Assert.IsTrue(view.Narrow);
+            view.Resize(900f);
+            Assert.IsFalse(view.Narrow);
+        }
+
+        [Test]
+        public void AddTarget_IgnoresTheSelectionAndCreatesAPlayer()
+        {
+            var navMesh = Track(new GameObject("NavMesh"));
+            navMesh.AddComponent<Unity.AI.Navigation.NavMeshSurface>();
+            Selection.activeGameObject = navMesh;
+            HorrorTarget target = null;
+            try
+            {
+                target = SceneFixes.AddTarget();
+
+                Assert.IsNull(navMesh.GetComponent<HorrorTarget>());
+                Assert.AreNotSame(navMesh, target.gameObject);
+                Assert.IsFalse(SceneFixes.IsMisplaced(target));
+                if (GameObject.FindWithTag("Player") == null && Camera.main == null)
+                    Assert.AreEqual("Player", target.gameObject.name);
+            }
+            finally
+            {
+                Selection.activeGameObject = null;
+                if (target != null && target.gameObject.name == "Player")
+                    Object.DestroyImmediate(target.gameObject);
+                else if (target != null)
+                    Object.DestroyImmediate(target);
+            }
+        }
+
+        [Test]
+        public void Doctor_WarnsWhenTheTargetIsOnTheNavMesh()
+        {
+            var navMesh = Track(new GameObject("NavMesh"));
+            navMesh.AddComponent<Unity.AI.Navigation.NavMeshSurface>();
+            navMesh.AddComponent<HorrorTarget>();
+            var checks = new List<DoctorCheck>();
+
+            DoctorChecks.Run(checks);
+
+            Assert.IsTrue(Has(checks, "not on the player", CheckLevel.Warning));
+            Assert.IsFalse(Has(checks, "Horror Target", CheckLevel.Ok));
+        }
+
+        [Test]
         public void Doctor_ExplainsWhatIsMissingInTheScene()
         {
             Enemy(new Vector3(500f, 0f, 500f), Vector3.forward, null, false);
@@ -240,6 +382,14 @@ namespace Nekuzaky.HorrorAI.Tests
             Assert.IsNotNull(Glyphs.StyleSheet);
             var scripts = new[] { typeof(HorrorEnemy), typeof(HorrorTarget), typeof(HorrorLightSource), typeof(NoiseEmitter), typeof(PatrolRoute),
                 typeof(HorrorArchetype), typeof(PerceptionProfile), typeof(BehaviorProfile) };
+            var partial = AssetDatabase.LoadAssetAtPath<MonoScript>(SceneFixes.PackagePath + "/Runtime/src/Components/HorrorEnemy.Perception.cs");
+            Assert.IsNotNull(partial);
+            Assert.AreSame(Glyphs.Tile(nameof(HorrorEnemy)), EditorGUIUtility.GetIconForObject(partial));
+            foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { SceneFixes.PackagePath + "/Editor/Icons" }))
+            {
+                var importer = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(guid));
+                Assert.IsFalse(importer.mipmapEnabled, importer.assetPath);
+            }
             foreach (var type in scripts)
             {
                 var script = Script(type);

@@ -188,7 +188,7 @@ namespace Nekuzaky.HorrorAI
             EventPrimer.Prime(onNoiseHeard);
         }
 
-                private void ResolveAgent()
+        private void ResolveAgent()
         {
             TryGetComponent(out _agent);
             _agentResolved = true;

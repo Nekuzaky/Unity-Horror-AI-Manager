@@ -2,12 +2,11 @@ fileFormatVersion: 2
 guid: 0acc37a3a2384c92a7511bc0f3ab58f0
 TextureImporter:
   internalIDToNameTable: []
-    second: hindsight-window-dark_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
     mipMapMode: 0
-    enableMipMap: 1
+    enableMipMap: 0
     sRGBTexture: 1
     linearTexture: 0
     fadeOut: 0

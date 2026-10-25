@@ -28,17 +28,20 @@ namespace Nekuzaky.HorrorAI.Editor
                 Root.AddToClassList(classes[i]);
             var head = Ui.Box("ha-card-head");
             head.Add(Glyphs.Icon(glyph, "ha-icon--small"));
-            head.Add(Ui.Styled(label, "ha-card-label"));
+            _label = Ui.Styled(label, "ha-card-label");
+            head.Add(_label);
             Root.Add(head);
             _value = Ui.Styled(Text.None, "ha-card-value");
             Root.Add(_value);
-            var row = Ui.Box("ha-card-head");
+            var row = Ui.Box("ha-card-head", "ha-card-foot");
             _detail = Ui.Styled(detail, "ha-card-detail");
-            _extra = Ui.Styled(string.Empty, "ha-card-detail");
+            _extra = Ui.Styled(string.Empty, "ha-card-detail", "ha-card-extra");
             row.Add(_detail);
             row.Add(_extra);
             Root.Add(row);
         }
+
+        public Label Label => _label;
 
         public Label Value => _value;
 
@@ -54,11 +57,14 @@ namespace Nekuzaky.HorrorAI.Editor
                 Ui.SetText(_detail, detail);
         }
 
+        public void SetLabel(string label) => Ui.SetText(_label, label);
+
         #endregion
 
 
         #region Private and Protected
 
+        private readonly Label _label;
         private readonly Label _value;
         private readonly Label _detail;
         private readonly Label _extra;

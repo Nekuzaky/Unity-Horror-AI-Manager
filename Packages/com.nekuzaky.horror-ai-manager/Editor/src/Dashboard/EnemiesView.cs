@@ -38,6 +38,7 @@ namespace Nekuzaky.HorrorAI.Editor
             right.AddToClassList("ha-detail-pane");
             right.Add(_detail.Root);
             Root.Add(right);
+            Root.RegisterCallback<GeometryChangedEvent>(OnResized);
         }
 
         public IReadOnlyList<HorrorEnemy> Items => _items;
@@ -47,6 +48,10 @@ namespace Nekuzaky.HorrorAI.Editor
         public EnemyDetail Detail => _detail;
 
         public HorrorEnemy Selected => _selected;
+
+        public bool Narrow => Root.ClassListContains(NarrowClass);
+
+        public void Resize(float width) => Root.EnableInClassList(NarrowClass, width <= NarrowWidth);
 
         public void Refresh(DashboardSampler sampler)
         {
@@ -86,6 +91,11 @@ namespace Nekuzaky.HorrorAI.Editor
         {
             _setup.Clear();
             _detail.Invalidate();
+            if (_selected == null)
+            {
+                _selected = null;
+                _autoPicked = false;
+            }
             _scene = Application.isPlaying ? null : Object.FindObjectsByType<HorrorEnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID);
             if (_scene == null)
                 return;
@@ -102,6 +112,8 @@ namespace Nekuzaky.HorrorAI.Editor
 
         #region Private and Protected
 
+        private const string NarrowClass = "ha-split--narrow";
+        private const float NarrowWidth = 600f;
         private const string NoneRunning = "No enemy is running. Enemies register when they are enabled in Play Mode.";
         private const string NoneInScene = "No Horror Enemy in the open scenes. Add one with GameObject > Horror AI > Enemy.";
 
@@ -141,14 +153,25 @@ namespace Nekuzaky.HorrorAI.Editor
 
         private bool Sync(IReadOnlyList<HorrorEnemy> source, int count)
         {
-            var changed = count != _items.Count;
-            for (var i = 0; i < count && !changed; i++)
-                changed = !ReferenceEquals(source[i], _items[i]);
+            var kept = 0;
+            var changed = false;
+            for (var i = 0; i < count; i++)
+            {
+                var enemy = source[i];
+                if (enemy == null)
+                    continue;
+                changed |= kept >= _items.Count || !ReferenceEquals(enemy, _items[kept]);
+                kept++;
+            }
+            changed |= kept != _items.Count;
             if (!changed)
                 return false;
             _items.Clear();
             for (var i = 0; i < count; i++)
-                _items.Add(source[i]);
+            {
+                if (source[i] != null)
+                    _items.Add(source[i]);
+            }
             return true;
         }
 
@@ -162,6 +185,8 @@ namespace Nekuzaky.HorrorAI.Editor
         }
 
         private void Unbind(VisualElement element, int index) => _bound.Remove((EnemyRow)element.userData);
+
+        private void OnResized(GeometryChangedEvent change) => Resize(change.newRect.width);
 
         private void OnPicked(IEnumerable<int> indices)
         {

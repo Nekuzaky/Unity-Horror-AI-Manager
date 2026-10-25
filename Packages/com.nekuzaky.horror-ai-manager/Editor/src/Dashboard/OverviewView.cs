@@ -35,6 +35,12 @@ namespace Nekuzaky.HorrorAI.Editor
 
         public StatCard Garbage => _garbage;
 
+        public StatCard Scene => _scene;
+
+        public Sparkline CostGraph => _costGraph;
+
+        public Label CostValue => _costValue;
+
         public int CountOf(HorrorState state) => _counts[(int)state];
 
         public void Refresh(DashboardSampler sampler) => Refresh(sampler, Application.isPlaying);
@@ -47,6 +53,7 @@ namespace Nekuzaky.HorrorAI.Editor
                 ShowScene();
                 return;
             }
+            _scene.SetLabel(RunningLabel);
             sampler.Summarize();
             CountStates();
             ShowStates();
@@ -74,6 +81,9 @@ namespace Nekuzaky.HorrorAI.Editor
         #region Private and Protected
 
         private const string EditHint = "Edit Mode: press Play to watch every enemy live. Until then this page counts what is in the open scenes.";
+        private const string WorstDetail = "worst of 600 frames";
+        private const string RunningLabel = "Enemies running";
+        private const string SceneLabel = "Enemies in the scene";
         private const string PlayHint = "Play Mode: live data, refreshed ten times a second. Times are the Horror AI update on the main thread.";
 
         private static readonly string[] StateDetails =
@@ -117,8 +127,8 @@ namespace Nekuzaky.HorrorAI.Editor
             _cost = new StatCard(Glyphs.Cost, "AI cost per frame", "p95");
             _rays = new StatCard(Glyphs.Rays, "Rays per frame", "budget");
             _perceptions = new StatCard(Glyphs.Perceptions, "Perceptions per frame", "enemies looking and listening");
-            _garbage = new StatCard(Glyphs.Garbage, "Garbage per frame", "worst of the last 600 frames");
-            _scene = new StatCard(Glyphs.Target, "Enemies running", "with");
+            _garbage = new StatCard(Glyphs.Garbage, "Garbage per frame", WorstDetail);
+            _scene = new StatCard(Glyphs.Target, SceneLabel, "with");
             cards.Add(_highest.Root);
             cards.Add(_cost.Root);
             cards.Add(_rays.Root);
@@ -187,20 +197,28 @@ namespace Nekuzaky.HorrorAI.Editor
             _perceptions.Set(Text.Decimal(sampler.AveragePerceptions));
             var latest = sampler.FrameAllocated.Count > 0 ? (long)sampler.FrameAllocated.Latest : -1L;
             var measured = latest >= 0L;
-            _garbage.Set(Text.Bytes(latest), measured ? Text.Bytes(sampler.WorstAllocated) : null, measured ? "worst of the last 600 frames" : "not measured in this build");
+            _garbage.Set(Text.Bytes(latest), measured ? Text.Bytes(sampler.WorstAllocated) : null, measured ? WorstDetail : "not measured in this build");
             _scene.Set(Text.Integer(stats.Enemies), Text.TargetsAndLights(stats.Targets, stats.Lights));
         }
 
         private void ShowScene()
         {
             for (var i = 0; i < _states.Length; i++)
+            {
+                _counts[i] = 0;
                 _states[i].Set(Text.None);
+            }
             _highest.Set(Text.None, null, "press Play");
             _cost.Set(Text.None, Text.None);
             _rays.Set(Text.None, Text.Integer(HorrorAI.RaycastBudget));
             _perceptions.Set(Text.None);
             _garbage.Set(Text.None, null, "press Play");
+            _scene.SetLabel(SceneLabel);
             _scene.Set(Text.Integer(_sceneEnemies), Text.TargetsAndLights(_sceneTargets, _sceneLights));
+            _costGraph.Show(null);
+            _suspicionGraph.Show(null);
+            Ui.SetText(_costValue, Text.None);
+            Ui.SetText(_suspicionValue, Text.None);
         }
 
         #endregion

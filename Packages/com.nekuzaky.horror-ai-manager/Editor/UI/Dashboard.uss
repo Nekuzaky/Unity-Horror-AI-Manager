@@ -372,3 +372,25 @@
 .ha-asset-summary { white-space: normal; color: var(--ha-text-2); font-size: 11px; }
 .ha-root .ha-asset-summary { color: var(--ha-text-2); }
 .ha-card-head > .ha-card-detail { margin-right: 4px; }
+
+.ha-root .unity-list-view__empty-label { display: none; }
+.ha-list-empty { padding: 16px 10px; white-space: normal; font-size: 12px; }
+.ha-root .ha-list-empty { color: var(--ha-text-2); }
+
+.ha-card-foot { flex-wrap: wrap; }
+.ha-card-extra { flex-shrink: 0; }
+
+.ha-col-state { flex-shrink: 0; align-items: flex-start; justify-content: center; }
+.ha-row .ha-chip { overflow: visible; text-overflow: clip; flex-shrink: 0; }
+
+.ha-split--narrow { flex-direction: column; }
+.ha-split--narrow > .ha-list-pane {
+    flex-basis: 50%;
+    min-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--ha-border);
+}
+.ha-split--narrow > .ha-detail-pane { flex-basis: 50%; min-width: 0; }
+.ha-split--narrow .ha-col-reason, .ha-split--narrow .ha-col-distance { display: none; }
+.ha-split--narrow .ha-col-name { width: 90px; }
